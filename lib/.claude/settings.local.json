@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(if \\(-not \\(Test-Path \"C:\\\\Users\\\\surbh\\\\Desktop\\\\APP\\\\precon_wellness\\\\lib\\\\models\"\\)\\) { New-Item -ItemType Directory -Path \"C:\\\\Users\\\\surbh\\\\Desktop\\\\APP\\\\precon_wellness\\\\lib\\\\models\" })",
+      "PowerShell(if \\(-not \\(Test-Path \"C:\\\\Users\\\\surbh\\\\Desktop\\\\APP\\\\precon_wellness\\\\lib\\\\data\"\\)\\) { New-Item -ItemType Directory -Path \"C:\\\\Users\\\\surbh\\\\Desktop\\\\APP\\\\precon_wellness\\\\lib\\\\data\" })"
+    ]
+  }
+}
