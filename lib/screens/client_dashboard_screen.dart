@@ -9,6 +9,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../widgets/confirm_exit_scope.dart';
 import '../utils/url_helper.dart';
 import '../theme/app_colors.dart';
+import '../layout/desktop.dart';
 import 'consultation_notes_screen.dart';
 import 'diet_plan_screen.dart';
 import 'progress_screen.dart';
@@ -17,6 +18,7 @@ import 'educational_resources_screen.dart';
 import 'appointments_screen.dart';
 import 'client_details_screen.dart';
 import 'login_screen.dart';
+import 'desktop/client_workspace.dart';
 
 class ClientDashboardScreen extends StatefulWidget {
   final Client client;
@@ -72,6 +74,9 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Wide browser windows get the desktop split view; phones keep this layout.
+    if (isDesktopLayout(context)) return ClientWorkspace(client: widget.client);
+
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
