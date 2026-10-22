@@ -179,7 +179,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     if (widget.role.canViewProgress) ...[
                       _divider(isDark),
                       _navRow(Icons.show_chart_rounded, 'Progress tracking', isDark, () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => ProgressScreen(client: widget.client, readOnly: false)))),
+                          builder: (_) => ProgressScreen(client: widget.client, readOnly: !widget.role.canEditProgress)))),
                     ],
                     Container(decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border(isDark))))),
                   ],
