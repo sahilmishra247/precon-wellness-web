@@ -169,12 +169,12 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     if (widget.role.canViewDietPlans) ...[
                       _divider(isDark),
                       _navRow(Icons.restaurant_outlined, 'Diet plan', isDark, () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => DietPlanScreen(client: widget.client, readOnly: false)))),
+                          builder: (_) => DietPlanScreen(client: widget.client, readOnly: !widget.role.canEditDietPlans)))),
                     ],
                     if (widget.role.canViewWorkoutPlans) ...[
                       _divider(isDark),
                       _navRow(Icons.fitness_center_outlined, 'Workout plan', isDark, () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => WorkoutPlanScreen(client: widget.client, readOnly: false)))),
+                          builder: (_) => WorkoutPlanScreen(client: widget.client, readOnly: !widget.role.canEditWorkoutPlans)))),
                     ],
                     if (widget.role.canViewProgress) ...[
                       _divider(isDark),
