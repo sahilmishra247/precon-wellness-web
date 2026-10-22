@@ -18,14 +18,13 @@ enum UserRole {
   }
 
   bool get canManageClients => this == UserRole.admin || true;
-  bool get canViewDietPlans =>
-      this == UserRole.admin ||
-      this == UserRole.dietician ||
-      this == UserRole.client;
-  bool get canViewWorkoutPlans =>
-      this == UserRole.admin ||
-      this == UserRole.coach ||
-      this == UserRole.client;
+  // Coaches and dieticians can view each other's plans, but only edit their own.
+  bool get canViewDietPlans => true;
+  bool get canViewWorkoutPlans => true;
+  bool get canEditDietPlans =>
+      this == UserRole.admin || this == UserRole.dietician;
+  bool get canEditWorkoutPlans =>
+      this == UserRole.admin || this == UserRole.coach;
   bool get canViewProgress =>
       this == UserRole.admin ||
       this == UserRole.coach ||
