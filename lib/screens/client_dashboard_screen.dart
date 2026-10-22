@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/appointment.dart';
 import '../models/client.dart';
-import '../models/progress_entry.dart';
 import '../models/user_role.dart';
 import '../services/appointment_service.dart';
 import '../services/theme_service.dart';
-import '../services/wellness_service.dart';
 import '../services/session_manager.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/confirm_exit_scope.dart';
@@ -30,10 +28,8 @@ class ClientDashboardScreen extends StatefulWidget {
 
 class _ClientDashboardScreenState extends State<ClientDashboardScreen> {
   final AppointmentService _appointmentService = AppointmentService();
-  final WellnessService _wellnessService = WellnessService();
 
   List<Appointment> _upcomingAppointments = [];
-  ProgressEntry? _latestProgress;
   bool _isLoading = true;
 
   @override
@@ -49,12 +45,9 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen> {
       final upcoming = appointments.where((a) => a.appointmentDate.isAfter(now)).toList()
         ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
 
-      final progressList = await _wellnessService.getProgressEntries(widget.client.email);
-
       if (mounted) {
         setState(() {
           _upcomingAppointments = upcoming;
-          _latestProgress = progressList.isNotEmpty ? progressList.first : null;
           _isLoading = false;
         });
       }
@@ -168,8 +161,8 @@ class _ClientDashboardScreenState extends State<ClientDashboardScreen> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _metricTile('Weight', '${widget.client.weight} kg',
-                            _latestProgress != null ? 'Logged: ${_latestProgress!.weight} kg' : null, isDark)),
+                        Expanded(child: _metricTile('Initial weight', '${widget.client.weight} kg',
+                            'See Progress tracking for current', isDark)),
                         const SizedBox(width: 10),
                         Expanded(child: _metricTile('Height', '${widget.client.height.toInt()} cm', null, isDark)),
                       ],
