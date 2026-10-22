@@ -25,7 +25,8 @@ enum UserRole {
       this == UserRole.admin || this == UserRole.dietician;
   bool get canEditWorkoutPlans =>
       this == UserRole.admin || this == UserRole.coach;
-  bool get canViewProgress =>
+  bool get canViewProgress => true;
+  bool get canEditProgress =>
       this == UserRole.admin ||
       this == UserRole.coach ||
       this == UserRole.client;
