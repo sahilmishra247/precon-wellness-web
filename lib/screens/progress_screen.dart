@@ -4,6 +4,7 @@ import '../models/progress_entry.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/weight_chart.dart';
 import '../theme/app_colors.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -43,12 +44,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
     try {
       final remoteEntries = await wellnessService.getProgressEntries(widget.client.email);
       if (mounted) {
+        // Newest first. client.weight stays the starting weight from the profile.
+        remoteEntries.sort((a, b) => b.date.compareTo(a.date));
         setState(() {
           entries = remoteEntries;
           widget.client.progressEntries = remoteEntries;
-          if (remoteEntries.isNotEmpty) {
-            widget.client.weight = remoteEntries.first.weight;
-          }
           isLoading = false;
         });
       }
@@ -144,6 +144,58 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
   }
 
+  static String _fmtKg(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+
+  Widget _buildSummary(bool isDark) {
+    final current = entries.first.weight;
+    final start = widget.client.weight > 0 ? widget.client.weight : entries.last.weight;
+    final change = current - start;
+    final changeText = change.abs() < 0.05
+        ? 'No change'
+        : '${change > 0 ? '+' : '−'}${_fmtKg(double.parse(change.abs().toStringAsFixed(1)))} kg';
+
+    Widget tile(String label, String value, String? sub) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 6),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+                if (sub != null) ...[
+                  const SizedBox(height: 2),
+                  Text(sub,
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted(isDark), fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            ),
+          ),
+        );
+
+    final d = entries.first.date;
+    return Row(
+      children: [
+        tile('Starting', '${_fmtKg(start)} kg', null),
+        const SizedBox(width: 10),
+        tile('Current', '${_fmtKg(current)} kg',
+            '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}'),
+        const SizedBox(width: 10),
+        tile('Change', changeText, '${entries.length} ${entries.length == 1 ? 'entry' : 'entries'}'),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -171,7 +223,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               constraints: const BoxConstraints(maxWidth: 720),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
+                child: ListView(
                   children: [
                     if (!widget.readOnly) ...[
                       Container(
@@ -232,38 +284,82 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    Expanded(
-                      child: isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : entries.isEmpty
-                              ? Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(32),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.show_chart_rounded,
-                                          size: 48,
-                                          color: AppColors.textMuted(isDark),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          'No weight history recorded yet',
-                                          style: TextStyle(
-                                            color: AppColors.textSecondary(isDark),
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: entries.length,
-                                  separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                                  itemBuilder: (context, index) {
+                    if (isLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(48),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (entries.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(Icons.show_chart_rounded, size: 48, color: AppColors.textMuted(isDark)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No weight history recorded yet',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(isDark),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (widget.client.weight > 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Starting weight: ${_fmtKg(widget.client.weight)} kg',
+                                style: TextStyle(color: AppColors.textMuted(isDark), fontSize: 13),
+                              ),
+                            ],
+                          ],
+                        ),
+                      )
+                    else ...[
+                      _buildSummary(isDark),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(12, 16, 16, 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface(isDark),
+                          borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+                          border: Border.all(color: AppColors.border(isDark)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 8),
+                              child: Text(
+                                'Weight over time (kg)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary(isDark),
+                                ),
+                              ),
+                            ),
+                            WeightChart(
+                              entries: entries,
+                              baseline: widget.client.weight > 0 ? widget.client.weight : null,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'History',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                          color: AppColors.textSecondary(isDark),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      for (var index = 0; index < entries.length; index++) ...[
+                        if (index > 0) Divider(height: 1, color: AppColors.border(isDark)),
+                        Builder(builder: (context) {
                                     final entry = entries[index];
                                     final isLatest = index == 0;
 
@@ -296,7 +392,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                                 Row(
                                                   children: [
                                                     Text(
-                                                      '${entry.weight} kg',
+                                                      '${_fmtKg(entry.weight)} kg',
                                                       style: TextStyle(
                                                         fontWeight: FontWeight.w600,
                                                         fontSize: 16,
@@ -343,9 +439,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                         ],
                                       ),
                                     );
-                                  },
-                                ),
-                    ),
+                        }),
+                      ],
+                    ],
                   ],
                 ),
               ),

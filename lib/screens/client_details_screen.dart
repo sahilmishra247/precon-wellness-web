@@ -120,7 +120,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   _sectionLabel('Health & body metrics', isDark),
                   const SizedBox(height: 10),
                   Row(children: [
-                    Expanded(child: _metricTile('Weight', '${widget.client.weight} kg', 'Current weight', AppColors.brand(isDark), isDark)),
+                    Expanded(child: _metricTile('Initial weight', '${widget.client.weight} kg', 'Current in Progress tracking', AppColors.brand(isDark), isDark)),
                     const SizedBox(width: 10),
                     Expanded(child: _metricTile('Height', '${widget.client.height.toInt()} cm', 'Standing height', AppColors.info, isDark)),
                   ]),
