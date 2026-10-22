@@ -86,9 +86,9 @@ class _ClientWorkspaceState extends State<ClientWorkspace> {
               key: ValueKey('home-$_homeVersion'),
               client: client,
               isDark: isDark,
-              showGreeting: true,
+              clientHome: true,
               onOpenProgress: () => _go(_Section.progress),
-              progressActionLabel: 'Log weight',
+              progressActionLabel: "Log this week's weight",
             ),
           ),
         );

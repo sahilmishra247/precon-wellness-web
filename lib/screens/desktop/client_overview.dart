@@ -11,15 +11,17 @@ import '../../theme/app_colors.dart';
 import '../../utils/url_helper.dart';
 import '../../widgets/weight_chart.dart';
 
-/// Two-column summary of one client: next session, today's meals and workout
-/// on the left; weight numbers, chart and latest note on the right.
-/// Used as the client's home and as the Overview tab staff see.
+/// Two-column summary of one client.
+/// Staff Overview tab: next session, today's meals and workout on the left;
+/// weight numbers, chart and latest note on the right.
+/// Client home ([clientHome]): today's plan first, with no weight numbers or
+/// chart, so a slow week on the scale is not the first thing a client sees.
 class ClientOverview extends StatefulWidget {
   final Client client;
   final bool isDark;
 
-  /// Shows "Hello, name" above the left column (client's own home).
-  final bool showGreeting;
+  /// The client's own home: greeting and today's plan, no weight figures.
+  final bool clientHome;
 
   /// Opens the Progress section, e.g. to log a weight.
   final VoidCallback? onOpenProgress;
@@ -29,7 +31,7 @@ class ClientOverview extends StatefulWidget {
     super.key,
     required this.client,
     required this.isDark,
-    this.showGreeting = false,
+    this.clientHome = false,
     this.onOpenProgress,
     this.progressActionLabel = 'Open progress',
   });
@@ -99,13 +101,13 @@ class _ClientOverviewState extends State<ClientOverview> {
       onRefresh: _load,
       child: LayoutBuilder(builder: (context, constraints) {
         final wide = constraints.maxWidth >= 820;
-        final left = [
-          if (widget.showGreeting) _greeting(),
-          _nextSession(),
-          _todaysMeals(),
-          _workout(),
-        ];
-        final right = [_numbers(), _chart(), _latestNote()];
+        final home = widget.clientHome;
+        final main = home
+            ? [_greeting(), _todaysMeals(), _workout()]
+            : [_numbers(), _chart(), _latestNote()];
+        final side = home
+            ? [_nextSession(), _latestNote(), _progressPrompt()]
+            : [_nextSession(), _todaysMeals(), _workout()];
 
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -113,13 +115,20 @@ class _ClientOverviewState extends State<ClientOverview> {
           child: wide
               ? Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 340, child: _stack(left)),
-                    const SizedBox(width: 20),
-                    Expanded(child: _stack(right)),
-                  ],
+                  children: home
+                      ? [
+                          Expanded(child: _stack(main)),
+                          const SizedBox(width: 20),
+                          // Line the side cards up with the first card under the greeting.
+                          SizedBox(width: 340, child: Padding(padding: const EdgeInsets.only(top: 76), child: _stack(side))),
+                        ]
+                      : [
+                          SizedBox(width: 340, child: _stack(side)),
+                          const SizedBox(width: 20),
+                          Expanded(child: _stack(main)),
+                        ],
                 )
-              : _stack([...left, ...right]),
+              : _stack(home ? [main.first, ...side.take(1), ...main.skip(1), ...side.skip(1)] : [...side, ...main]),
         );
       }),
     );
@@ -137,17 +146,20 @@ class _ClientOverviewState extends State<ClientOverview> {
 
   // ── Left column ──────────────────────────────────────────────────────────
 
+  String _salutation(DateTime now) =>
+      now.hour < 12 ? 'Good morning' : (now.hour < 17 ? 'Good afternoon' : 'Good evening');
+
   Widget _greeting() {
     final now = DateTime.now();
     final firstName = widget.client.fullName.split(' ').first;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Hello, $firstName',
+        Text('${_salutation(now)}, $firstName',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: AppColors.textPrimary(_dark))),
         const SizedBox(height: 4),
         Text(
-          [_fmtDay(now), if (widget.client.goal.isNotEmpty) 'Goal: ${widget.client.goal}'].join(' · '),
+          "${_fmtDay(now)} · here's your plan for today",
           style: TextStyle(fontSize: 13, color: AppColors.textSecondary(_dark)),
         ),
       ]),
@@ -275,7 +287,7 @@ class _ClientOverviewState extends State<ClientOverview> {
   Widget _latestNote() {
     final note = _notes.isNotEmpty ? _notes.first : null;
     return _card(
-      title: 'Latest consultation note',
+      title: widget.clientHome ? 'From your care team' : 'Latest consultation note',
       trailing: note == null ? null : _muted(_fmtDay(note.createdAt)),
       child: note == null
           ? _empty('No notes yet.')
@@ -287,6 +299,25 @@ class _ClientOverviewState extends State<ClientOverview> {
                 _muted('By ${note.authorName}'),
               ],
             ]),
+    );
+  }
+
+  /// Client home only: an invitation to weigh in, with no figures.
+  Widget _progressPrompt() {
+    return _card(
+      title: 'Progress',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Weigh in once a week, at the same time of day.',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary(_dark))),
+        if (widget.onOpenProgress != null) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: widget.onOpenProgress,
+            icon: const Icon(Icons.monitor_weight_outlined, size: 16),
+            label: Text(widget.progressActionLabel),
+          ),
+        ],
+      ]),
     );
   }
 
