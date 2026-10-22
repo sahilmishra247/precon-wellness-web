@@ -37,6 +37,14 @@ abstract class AppColors {
   static const Color darkInputFill = Color(0xFF161616);
 
   // ---------------------------------------------------------------------------
+  // Desktop navigation rail (web split view)
+  // ---------------------------------------------------------------------------
+  static const Color railLight = Color(0xFF0B3B34);
+  static const Color railDark = Color(0xFF0F1F1C);
+  static const Color railInk = Color(0xFFCFE7E2);
+  static const Color railActive = Color(0x1FFFFFFF);
+
+  // ---------------------------------------------------------------------------
   // Semantic
   // ---------------------------------------------------------------------------
   static const Color error = Color(0xFFDC2626);
@@ -82,6 +90,7 @@ abstract class AppColors {
   static Color textMuted(bool isDark) => isDark ? darkTextMuted : lightTextMuted;
   static Color inputFill(bool isDark) => isDark ? darkInputFill : lightInputFill;
   static Color brand(bool isDark) => isDark ? primaryLight : primary;
+  static Color rail(bool isDark) => isDark ? railDark : railLight;
   static Color brandMuted(bool isDark) =>
       isDark ? const Color(0x1F17A589) : primaryMuted;
 }

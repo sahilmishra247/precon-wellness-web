@@ -7,12 +7,14 @@ import '../services/session_manager.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/confirm_exit_scope.dart';
 import '../theme/app_colors.dart';
+import '../layout/desktop.dart';
 import 'add_client_screen.dart';
 import 'appointments_screen.dart';
 import 'archived_clients_screen.dart';
 import 'clients_screen.dart';
 import 'educational_resources_screen.dart';
 import 'login_screen.dart';
+import 'desktop/staff_workspace.dart';
 import 'staff_management_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -55,6 +57,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Wide browser windows get the desktop split view; phones keep this layout.
+    if (isDesktopLayout(context)) return StaffWorkspace(role: widget.role);
+
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
