@@ -3,6 +3,7 @@ import '../models/client.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/desktop_shell.dart';
 
 class ArchivedClientsScreen extends StatefulWidget {
   const ArchivedClientsScreen({super.key});
@@ -48,12 +49,55 @@ class _ArchivedClientsScreenState extends State<ArchivedClientsScreen> {
     }
   }
 
+  Widget _buildDesktop(bool isDark) {
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                PaneToolbar(
+                  title: 'Archived accounts',
+                  subtitle: '${archivedClients.length} archived · restore to move a client back to the list',
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: PaneTable(
+                    columns: const ['Name', 'Email', 'Goal', ''],
+                    flex: const [3, 4, 3, 2],
+                    emptyText: 'No archived accounts',
+                    rows: [
+                      for (final c in archivedClients)
+                        PaneTableRow(cells: [
+                          Text(c.fullName, style: paneCellStyle(isDark, strong: true)),
+                          Text(c.email, style: paneCellStyle(isDark, muted: true), overflow: TextOverflow.ellipsis),
+                          Text(c.goal.isEmpty ? '—' : c.goal, style: paneCellStyle(isDark)),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.restore_rounded, size: 15),
+                              label: const Text('Restore'),
+                              onPressed: () => _restoreClient(c),
+                            ),
+                          ),
+                        ]),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

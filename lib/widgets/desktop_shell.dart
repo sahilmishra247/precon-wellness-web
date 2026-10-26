@@ -129,10 +129,259 @@ class PaneNavigator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: Navigator(
-        onGenerateInitialRoutes: (_, _) => [MaterialPageRoute(builder: (_) => child)],
+    return DesktopPaneScope(
+      child: ClipRect(
+        child: Navigator(
+          onGenerateInitialRoutes: (_, _) => [MaterialPageRoute(builder: (_) => child)],
+        ),
       ),
     );
   }
+}
+
+/// True when a client (not staff) is signed in, for wording screens to them.
+bool get viewerIsClient => SessionManager.role == 'client';
+
+/// Present above every screen hosted in a [PaneNavigator]. Screens check
+/// [DesktopPaneScope.of] to drop their phone app bar and floating button and
+/// use the wide layout instead.
+class DesktopPaneScope extends InheritedWidget {
+  const DesktopPaneScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<DesktopPaneScope>() != null;
+
+  @override
+  bool updateShouldNotify(DesktopPaneScope oldWidget) => false;
+}
+
+/// Title row at the top of a screen inside a desktop pane, with the screen's
+/// actions on the right (where the phone layout has a floating button).
+class PaneToolbar extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final List<Widget> actions;
+
+  const PaneToolbar({super.key, required this.title, this.subtitle, this.actions = const []});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
+                ],
+              ],
+            ),
+          ),
+          for (final a in actions) ...[const SizedBox(width: 8), a],
+        ],
+      ),
+    );
+  }
+}
+
+/// One row of a [PaneTable]. [actions] (edit, delete...) show on hover.
+class PaneTableRow {
+  final List<Widget> cells;
+  final VoidCallback? onTap;
+  final List<Widget> actions;
+  const PaneTableRow({required this.cells, this.onTap, this.actions = const []});
+}
+
+/// A bordered table for lists inside a desktop pane: a header row, then one
+/// row per item. [flex] gives each column's share of the width.
+class PaneTable extends StatelessWidget {
+  final List<String> columns;
+  final List<int> flex;
+  final List<PaneTableRow> rows;
+  final String emptyText;
+
+  const PaneTable({
+    super.key,
+    required this.columns,
+    required this.flex,
+    required this.rows,
+    this.emptyText = 'Nothing here yet',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasActions = rows.any((r) => r.actions.isNotEmpty);
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        border: Border.all(color: AppColors.border(isDark)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: AppColors.bg(isDark),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(children: [
+              for (var i = 0; i < columns.length; i++)
+                Expanded(
+                  flex: flex[i],
+                  child: Text(
+                    columns[i],
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary(isDark)),
+                  ),
+                ),
+              if (hasActions) const SizedBox(width: 88),
+            ]),
+          ),
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(emptyText, style: TextStyle(fontSize: 14, color: AppColors.textSecondary(isDark))),
+            ),
+          for (final row in rows)
+            _PaneTableRowView(row: row, flex: flex, isDark: isDark, reserveActions: hasActions),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaneTableRowView extends StatefulWidget {
+  final PaneTableRow row;
+  final List<int> flex;
+  final bool isDark;
+  final bool reserveActions;
+  const _PaneTableRowView({required this.row, required this.flex, required this.isDark, required this.reserveActions});
+
+  @override
+  State<_PaneTableRowView> createState() => _PaneTableRowViewState();
+}
+
+class _PaneTableRowViewState extends State<_PaneTableRowView> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = widget.row;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Material(
+        color: _hover ? AppColors.bg(widget.isDark) : Colors.transparent,
+        child: InkWell(
+          onTap: row.onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border(widget.isDark)))),
+            child: Row(children: [
+              for (var i = 0; i < row.cells.length; i++)
+                Expanded(flex: widget.flex[i], child: row.cells[i]),
+              if (widget.reserveActions)
+                SizedBox(
+                  width: 88,
+                  child: Opacity(
+                    // Kept in the tree (not just hidden) so keyboard users can reach them.
+                    opacity: _hover ? 1 : 0.35,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.end, children: row.actions),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small icon button used for row actions in a [PaneTable].
+class RowAction extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Color? color;
+  const RowAction({super.key, required this.icon, required this.tooltip, required this.onPressed, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      iconSize: 18,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, color: color ?? AppColors.textSecondary(isDark)),
+    );
+  }
+}
+
+/// Body text style for a [PaneTable] cell.
+TextStyle paneCellStyle(bool isDark, {bool strong = false, bool muted = false}) => TextStyle(
+      fontSize: 14,
+      fontWeight: strong ? FontWeight.w500 : FontWeight.w400,
+      color: muted ? AppColors.textSecondary(isDark) : AppColors.textPrimary(isDark),
+    );
+
+/// Present above a screen shown with [showSideSheet].
+class SideSheetScope extends InheritedWidget {
+  const SideSheetScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SideSheetScope>() != null;
+
+  @override
+  bool updateShouldNotify(SideSheetScope oldWidget) => false;
+}
+
+/// Slides [child] in from the right over the current page, like a drawer,
+/// so forms open without hiding the rest of the layout. Completes with the
+/// value [child] pops with.
+Future<T?> showSideSheet<T>(BuildContext context, Widget child, {double width = 560}) {
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close',
+    barrierColor: Colors.black.withValues(alpha: 0.3),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, _, _) => Align(
+      alignment: Alignment.centerRight,
+      child: Material(
+        elevation: 12,
+        child: SizedBox(width: width, height: double.infinity, child: SideSheetScope(child: child)),
+      ),
+    ),
+    transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+      position: Tween(begin: const Offset(1, 0), end: Offset.zero)
+          .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+      child: child,
+    ),
+  );
+}
+
+/// App bar for a screen inside a side sheet: title and a close button.
+PreferredSizeWidget sideSheetAppBar(BuildContext context, String title) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return AppBar(
+    automaticallyImplyLeading: false,
+    title: Text(title, style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 18)),
+    actions: [
+      IconButton(
+        tooltip: 'Close',
+        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(isDark)),
+        onPressed: () => Navigator.pop(context),
+      ),
+      const SizedBox(width: 8),
+    ],
+  );
 }

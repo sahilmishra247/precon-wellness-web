@@ -11,17 +11,23 @@ abstract class AppColors {
   static const Color primaryLight = Color(0xFF17A589); // for dark mode
   static const Color primaryMuted = Color(0x140E7F6E); // 8% opacity tint
 
+  // Coral marks what needs attention (next session, join call). Use sparingly.
+  static const Color accent = Color(0xFFC4533D);
+  static const Color accentLight = Color(0xFFE07A63); // for dark mode
+  static const Color accentTint = Color(0xFFFCEDE9);
+  static const Color accentInkLight = Color(0xFFA8432F); // coral text on the tint
+
   // ---------------------------------------------------------------------------
   // Light Mode
   // ---------------------------------------------------------------------------
-  static const Color lightBackground = Color(0xFFF9FAFB);
+  static const Color lightBackground = Color(0xFFFAF8F5); // warm off-white
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightBorder = Color(0xFFE5E7EB);
-  static const Color lightBorderSubtle = Color(0xFFF3F4F6);
+  static const Color lightBorder = Color(0xFFE8E3DC);
+  static const Color lightBorderSubtle = Color(0xFFF2EEE8);
   static const Color lightTextPrimary = Color(0xFF111827);
   static const Color lightTextSecondary = Color(0xFF6B7280);
   static const Color lightTextMuted = Color(0xFF9CA3AF);
-  static const Color lightInputFill = Color(0xFFF9FAFB);
+  static const Color lightInputFill = Color(0xFFFAF8F5);
 
   // ---------------------------------------------------------------------------
   // Dark Mode
@@ -39,9 +45,9 @@ abstract class AppColors {
   // ---------------------------------------------------------------------------
   // Desktop navigation rail (web split view)
   // ---------------------------------------------------------------------------
-  static const Color railLight = Color(0xFF0B3B34);
-  static const Color railDark = Color(0xFF0F1F1C);
-  static const Color railInk = Color(0xFFCFE7E2);
+  static const Color railLight = Color(0xFF12343B);
+  static const Color railDark = Color(0xFF0E1F23);
+  static const Color railInk = Color(0xFFCFE3E5);
   static const Color railActive = Color(0x1FFFFFFF);
 
   // ---------------------------------------------------------------------------
@@ -91,6 +97,9 @@ abstract class AppColors {
   static Color inputFill(bool isDark) => isDark ? darkInputFill : lightInputFill;
   static Color brand(bool isDark) => isDark ? primaryLight : primary;
   static Color rail(bool isDark) => isDark ? railDark : railLight;
+  static Color accentColor(bool isDark) => isDark ? accentLight : accent;
+  static Color accentMuted(bool isDark) => isDark ? const Color(0x24E07A63) : accentTint;
+  static Color accentInk(bool isDark) => isDark ? accentLight : accentInkLight;
   static Color brandMuted(bool isDark) =>
       isDark ? const Color(0x1F17A589) : primaryMuted;
 }

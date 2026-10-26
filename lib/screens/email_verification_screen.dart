@@ -7,6 +7,7 @@ import '../services/session_manager.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
+import '../widgets/auth_split_layout.dart';
 import 'client_dashboard_screen.dart';
 import 'login_screen.dart';
 
@@ -212,7 +213,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
 
-        return Scaffold(
+        return AuthSplitLayout(child: Scaffold(
           backgroundColor: AppColors.bg(isDark),
           appBar: AppBar(
             leading: IconButton(
@@ -368,7 +369,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }

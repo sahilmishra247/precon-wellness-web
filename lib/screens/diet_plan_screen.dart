@@ -5,6 +5,8 @@ import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../utils/units.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 
 class DietPlanScreen extends StatefulWidget {
@@ -117,8 +119,8 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     }).length;
   }
 
-  Future<void> _showFoodDialog(String mealType, {FoodItem? item}) async {
-    final defaultDay = selectedDay == 'week' ? 'all' : selectedDay;
+  Future<void> _showFoodDialog(String mealType, {FoodItem? item, String? day}) async {
+    final defaultDay = day ?? (selectedDay == 'week' ? 'all' : selectedDay);
     final result = await showDialog<FoodItem>(
       context: context,
       builder: (_) => _FoodItemDialog(
@@ -210,6 +212,13 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
 
+        if (DesktopPaneScope.of(context)) {
+          return Scaffold(
+            backgroundColor: AppColors.bg(isDark),
+            body: isLoading ? const Center(child: CircularProgressIndicator()) : _buildDesktopWeek(isDark),
+          );
+        }
+
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
           appBar: AppBar(
@@ -249,6 +258,134 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                 ),
         );
       },
+    );
+  }
+
+  // ── Desktop: whole week as a grid (days across, meals down) ──────────────
+  Widget _buildDesktopWeek(bool isDark) {
+    final daily = allItems.where((i) => i.isDaily).length;
+    final subtitle = viewerIsClient
+        ? '${allItems.length} items, planned by your care team'
+        : widget.readOnly
+        ? 'View only · ${allItems.length} items'
+        : '${allItems.length} items · $daily on every day · click an item to edit it';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PaneToolbar(title: viewerIsClient ? 'Your meals this week' : 'Week plan', subtitle: subtitle),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
+            child: LayoutBuilder(builder: (context, constraints) {
+              const minWidth = 96.0 + 7 * 128;
+              final grid = _weekGrid(isDark);
+              if (constraints.maxWidth >= minWidth) return grid;
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(width: minWidth, child: grid),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _weekGrid(bool isDark) {
+    final todayKey = _getTodayKey();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          const SizedBox(width: 96),
+          for (final day in _daysOfWeek)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                child: Text(
+                  day['key'] == todayKey ? '${day['label']} · Today' : day['label']!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: day['key'] == todayKey ? AppColors.brand(isDark) : AppColors.textPrimary(isDark),
+                  ),
+                ),
+              ),
+            ),
+        ]),
+        for (final meal in _mealTypes)
+          // Every cell in a meal row grows to the tallest one.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 96,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 16, 8, 0),
+                    child: Text(
+                      meal.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                        color: AppColors.textSecondary(isDark),
+                      ),
+                    ),
+                  ),
+                ),
+                for (final day in _daysOfWeek)
+                  Expanded(child: _weekCell(day['key']!, meal, day['key'] == todayKey, isDark)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _weekCell(String dayKey, String meal, bool isToday, bool isDark) {
+    final items = _getItemsForDayAndMeal(dayKey, meal);
+    return Container(
+      margin: const EdgeInsets.all(4),
+      padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
+      constraints: const BoxConstraints(minHeight: 72),
+      decoration: BoxDecoration(
+        color: isToday ? AppColors.brandMuted(isDark) : AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(AppColors.radiusSmall),
+        border: Border.all(color: AppColors.border(isDark)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final item in items)
+            _GridFoodItem(
+              item: item,
+              isDark: isDark,
+              onEdit: widget.readOnly ? null : () => _showFoodDialog(meal, item: item),
+              onDelete: widget.readOnly ? null : () => _deleteFoodItem(item),
+            ),
+          if (items.isEmpty && widget.readOnly)
+            Padding(
+              padding: const EdgeInsets.all(6),
+              child: Text('—', style: TextStyle(color: AppColors.textMuted(isDark))),
+            ),
+          if (!widget.readOnly)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _showFoodDialog(meal, day: dayKey),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: const Size(0, 30),
+                  foregroundColor: AppColors.textSecondary(isDark),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 15),
+                label: const Text('Add'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -995,6 +1132,70 @@ class _FoodItemDialogState extends State<_FoodItemDialog> {
           child: const Text('Save'),
         ),
       ],
+    );
+  }
+}
+
+/// One food in the desktop week grid. Click to edit; a remove button shows
+/// on hover.
+class _GridFoodItem extends StatefulWidget {
+  final FoodItem item;
+  final bool isDark;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  const _GridFoodItem({required this.item, required this.isDark, this.onEdit, this.onDelete});
+
+  @override
+  State<_GridFoodItem> createState() => _GridFoodItemState();
+}
+
+class _GridFoodItemState extends State<_GridFoodItem> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final item = widget.item;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: InkWell(
+        onTap: widget.onEdit,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 5, 2, 5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary(isDark))),
+                    Text('${fmtAmount(item.amount)} ${item.unit}',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark))),
+                  ],
+                ),
+              ),
+              if (widget.onDelete != null)
+                Opacity(
+                  opacity: _hover ? 1 : 0,
+                  child: IconButton(
+                    tooltip: 'Remove',
+                    onPressed: widget.onDelete,
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+                    padding: EdgeInsets.zero,
+                    iconSize: 15,
+                    icon: Icon(Icons.close_rounded, color: AppColors.textMuted(isDark)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

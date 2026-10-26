@@ -4,6 +4,8 @@ import '../models/note.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 
 class ConsultationNotesScreen extends StatefulWidget {
@@ -160,12 +162,154 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
     }
   }
 
+  // Notes newest first, with the new-note box beside them.
+  Widget _buildDesktop(bool isDark) {
+    final sorted = [...notes]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final timeline = isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : ListView(
+            padding: const EdgeInsets.fromLTRB(32, 0, 16, 32),
+            children: [
+              if (sorted.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('No consultation notes yet',
+                      style: TextStyle(fontSize: 14, color: AppColors.textSecondary(isDark))),
+                ),
+              for (final note in sorted) ...[
+                _desktopNoteCard(note, isDark),
+                const SizedBox(height: 12),
+              ],
+            ],
+          );
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          PaneToolbar(
+            title: viewerIsClient ? 'Notes from your care team' : 'Consultation notes',
+            subtitle: '${notes.length} notes · newest first',
+          ),
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Without the side box, keep lines to a readable length.
+                Expanded(
+                  child: widget.readOnly
+                      ? Align(
+                          alignment: Alignment.topLeft,
+                          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 880), child: timeline),
+                        )
+                      : timeline,
+                ),
+                if (!widget.readOnly)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 32),
+                    child: SizedBox(width: 340, child: _desktopComposer(isDark)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopComposer(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        border: Border.all(color: AppColors.border(isDark)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('New note',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+          const SizedBox(height: 10),
+          TextField(
+            controller: noteController,
+            minLines: 6,
+            maxLines: 12,
+            style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 14),
+            decoration: const InputDecoration(
+              hintText: 'Observations, client feedback, recommendations...',
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: isAdding ? null : _addNote,
+            icon: isAdding
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Add note'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _desktopNoteCard(Note note, bool isDark) {
+    final d = note.createdAt;
+    // Notes saved without a time come back as midnight; show only the day then.
+    final when = d.hour == 0 && d.minute == 0 ? fmtDay(d) : fmtDayTime(d);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 8, 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface(isDark),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        border: Border.all(color: AppColors.border(isDark)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${note.authorName ?? 'Coach'} · $when',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary(isDark)),
+                ),
+                const SizedBox(height: 6),
+                SelectableText(
+                  note.text,
+                  style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textPrimary(isDark)),
+                ),
+              ],
+            ),
+          ),
+          if (!widget.readOnly) ...[
+            RowAction(icon: Icons.edit_outlined, tooltip: 'Edit', onPressed: () => _editNote(note)),
+            RowAction(
+              icon: Icons.delete_outline_rounded,
+              tooltip: 'Delete',
+              color: AppColors.error,
+              onPressed: () => _deleteNote(note),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

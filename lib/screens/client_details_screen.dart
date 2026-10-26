@@ -3,6 +3,8 @@ import '../models/client.dart';
 import '../models/user_role.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 import 'consultation_notes_screen.dart';
 import 'diet_plan_screen.dart';
@@ -36,10 +38,114 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
   }
 
   Future<void> _openEditScreen() async {
-    final updated = await Navigator.push<bool>(
-      context, MaterialPageRoute(builder: (_) => EditClientScreen(client: widget.client)),
-    );
+    final updated = DesktopPaneScope.of(context)
+        ? await showSideSheet<bool>(context, EditClientScreen(client: widget.client))
+        : await Navigator.push<bool>(
+            context, MaterialPageRoute(builder: (_) => EditClientScreen(client: widget.client)),
+          );
     if (updated == true && mounted) setState(() {});
+  }
+
+  // Two columns: who they are and how to reach them, then body metrics.
+  Widget _buildDesktop(bool isDark, bool isClientView, double bmi, String bmiCategory, Color bmiColor) {
+    final c = widget.client;
+    final card = BoxDecoration(
+      color: AppColors.surface(isDark),
+      borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+      border: Border.all(color: AppColors.border(isDark)),
+    );
+    // Clients see their BMI without a category label (it can read as a judgement).
+    final bmiNote = isClientView ? 'Body mass index' : bmiCategory;
+    final bmiNoteColor = isClientView ? AppColors.textSecondary(isDark) : bmiColor;
+    final muted = AppColors.textSecondary(isDark);
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          PaneToolbar(
+            title: isClientView ? 'Your profile' : c.fullName,
+            subtitle: c.email,
+            actions: [
+              OutlinedButton.icon(
+                onPressed: _openEditScreen,
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit profile'),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: card,
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(children: [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundColor: AppColors.brandMuted(isDark),
+                                child: Text(
+                                  c.fullName.isNotEmpty ? c.fullName[0].toUpperCase() : 'C',
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.brand(isDark)),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(c.fullName,
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                                  const SizedBox(height: 2),
+                                  Text(c.goal.isNotEmpty ? c.goal : 'General wellness',
+                                      style: TextStyle(fontSize: 13, color: AppColors.brand(isDark), fontWeight: FontWeight.w500)),
+                                ]),
+                              ),
+                            ]),
+                          ),
+                          Divider(height: 1, color: AppColors.border(isDark)),
+                          _infoRow(Icons.phone_outlined, 'Phone', c.phoneNumber.isNotEmpty ? c.phoneNumber : '—', isDark),
+                          Divider(height: 1, indent: 54, color: AppColors.border(isDark)),
+                          _infoRow(Icons.email_outlined, 'Email', c.email, isDark),
+                          Divider(height: 1, indent: 54, color: AppColors.border(isDark)),
+                          _infoRow(Icons.circle_outlined, 'Status', c.isArchived ? 'Archived' : 'Active', isDark),
+                        ]),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Row(children: [
+                          Expanded(child: _metricTile('Starting weight', fmtKg(c.weight), 'Latest is in Progress', muted, isDark)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _metricTile('Height', '${c.height.toInt()} cm', 'Standing height', muted, isDark)),
+                        ]),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(child: _metricTile('BMI', bmi > 0 ? bmi.toStringAsFixed(1) : '—', bmiNote, bmiNoteColor, isDark)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _metricTile('Age', '${c.age} yrs', c.gender.isNotEmpty ? c.gender : '—', muted, isDark),
+                          ),
+                        ]),
+                      ]),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -51,6 +157,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
         final isClientView = widget.role.isClient;
         final bmi = _calculateBMI();
         final (bmiCategory, bmiColor) = _getBMICategory(bmi, isDark);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark, isClientView, bmi, bmiCategory, bmiColor);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
