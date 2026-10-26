@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
 class AddClientScreen extends StatefulWidget {
@@ -90,10 +91,12 @@ class _AddClientScreenState extends State<AddClientScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
-          appBar: AppBar(
-            title: Text('Add client', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
-            actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
-          ),
+          appBar: SideSheetScope.of(context)
+              ? sideSheetAppBar(context, 'Add client')
+              : AppBar(
+                  title: Text('Add client', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
+                  actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
+                ),
           body: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 650),

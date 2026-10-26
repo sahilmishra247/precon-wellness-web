@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../widgets/simple_markdown.dart';
 import '../theme/app_colors.dart';
 
 class EducationalResourcesScreen extends StatelessWidget {
@@ -104,6 +106,7 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
 
   void _openArticle(BuildContext context, Map<String, dynamic> article) {
     final isDark = ThemeService.instance.isDark(context);
+    if (DesktopPaneScope.of(context)) return _openArticleDialog(context, article, isDark);
 
     showModalBottomSheet(
       context: context,
@@ -184,14 +187,113 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
                 height: 28,
                 color: AppColors.border(isDark),
               ),
-              Text(
-                article['content'] as String,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.65,
-                  color: AppColors.textSecondary(isDark),
+              SimpleMarkdown(text: article['content'] as String, isDark: isDark),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Articles read in a centred dialog at a comfortable line length.
+  void _openArticleDialog(BuildContext context, Map<String, dynamic> article, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppColors.surface(isDark),
+        insetPadding: const EdgeInsets.all(40),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 24, 16, 8),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(article['readTime'] as String,
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(isDark)),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ]),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                  child: SimpleMarkdown(text: article['content'] as String, isDark: isDark),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktop(BuildContext context, bool isDark) {
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          PaneToolbar(title: 'Educational library', subtitle: '${_articles.length} articles'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final columns = (constraints.maxWidth / 300).floor().clamp(1, 4);
+              final width = (constraints.maxWidth - (columns - 1) * 16) / columns;
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  for (final article in _articles)
+                    SizedBox(width: width, child: _articleCard(context, article, isDark)),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _articleCard(BuildContext context, Map<String, dynamic> article, bool isDark) {
+    return Material(
+      color: AppColors.surface(isDark),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        side: BorderSide(color: AppColors.border(isDark)),
+      ),
+      child: InkWell(
+        onTap: () => _openArticle(context, article),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.brandMuted(isDark),
+                  borderRadius: BorderRadius.circular(AppColors.radiusMedium),
+                ),
+                child: Icon(article['icon'] as IconData, color: AppColors.brand(isDark), size: 22),
+              ),
+              const SizedBox(height: 16),
+              Text(article['title'] as String,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+              const SizedBox(height: 4),
+              Text(article['subtitle'] as String,
+                  style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.textSecondary(isDark))),
+              const SizedBox(height: 12),
+              Text(article['readTime'] as String,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.brand(isDark))),
             ],
           ),
         ),
@@ -205,6 +307,8 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(context, isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

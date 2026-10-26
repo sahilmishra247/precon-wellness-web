@@ -332,3 +332,56 @@ TextStyle paneCellStyle(bool isDark, {bool strong = false, bool muted = false}) 
       fontWeight: strong ? FontWeight.w500 : FontWeight.w400,
       color: muted ? AppColors.textSecondary(isDark) : AppColors.textPrimary(isDark),
     );
+
+/// Present above a screen shown with [showSideSheet].
+class SideSheetScope extends InheritedWidget {
+  const SideSheetScope({super.key, required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SideSheetScope>() != null;
+
+  @override
+  bool updateShouldNotify(SideSheetScope oldWidget) => false;
+}
+
+/// Slides [child] in from the right over the current page, like a drawer,
+/// so forms open without hiding the rest of the layout. Completes with the
+/// value [child] pops with.
+Future<T?> showSideSheet<T>(BuildContext context, Widget child, {double width = 560}) {
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close',
+    barrierColor: Colors.black.withValues(alpha: 0.3),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (ctx, _, _) => Align(
+      alignment: Alignment.centerRight,
+      child: Material(
+        elevation: 12,
+        child: SizedBox(width: width, height: double.infinity, child: SideSheetScope(child: child)),
+      ),
+    ),
+    transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+      position: Tween(begin: const Offset(1, 0), end: Offset.zero)
+          .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+      child: child,
+    ),
+  );
+}
+
+/// App bar for a screen inside a side sheet: title and a close button.
+PreferredSizeWidget sideSheetAppBar(BuildContext context, String title) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return AppBar(
+    automaticallyImplyLeading: false,
+    title: Text(title, style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 18)),
+    actions: [
+      IconButton(
+        tooltip: 'Close',
+        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary(isDark)),
+        onPressed: () => Navigator.pop(context),
+      ),
+      const SizedBox(width: 8),
+    ],
+  );
+}

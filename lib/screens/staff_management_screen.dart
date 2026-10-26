@@ -4,6 +4,7 @@ import '../models/staff_member.dart';
 import '../services/staff_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
 class StaffManagementScreen extends StatefulWidget {
@@ -241,12 +242,95 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     );
   }
 
+  Widget _buildDesktop(bool isDark) {
+    final staff = _filteredStaff;
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          PaneToolbar(
+            title: 'Staff directory',
+            subtitle: '${_staff.length} staff accounts',
+            actions: [
+              SizedBox(
+                width: 240,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (v) => setState(() => _searchQuery = v.trim()),
+                  decoration: InputDecoration(
+                    hintText: 'Search staff',
+                    isDense: true,
+                    prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted(isDark)),
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: _showAddStaffDialog,
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('Add staff'),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  _filterChip('All', 'all', isDark),
+                  const SizedBox(width: 8),
+                  _filterChip('Coaches', 'coach', isDark),
+                  const SizedBox(width: 8),
+                  _filterChip('Dieticians', 'dietician', isDark),
+                ]),
+                const SizedBox(height: 12),
+                if (_isLoading)
+                  const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))
+                else if (_error != null)
+                  Text('Could not load staff: $_error', style: const TextStyle(color: AppColors.error))
+                else
+                  PaneTable(
+                    columns: const ['Name', 'Role', 'Email', 'Phone', 'Specialty'],
+                    flex: const [3, 2, 4, 2, 3],
+                    emptyText: 'No staff match',
+                    rows: [
+                      for (final m in staff)
+                        PaneTableRow(
+                          cells: [
+                            Text(m.name, style: paneCellStyle(isDark, strong: true)),
+                            Text(m.roleLabel, style: paneCellStyle(isDark)),
+                            Text(m.email, style: paneCellStyle(isDark, muted: true), overflow: TextOverflow.ellipsis),
+                            Text(m.phoneNumber.isEmpty ? '—' : m.phoneNumber, style: paneCellStyle(isDark, muted: true)),
+                            Text(m.specialty.isEmpty ? '—' : m.specialty, style: paneCellStyle(isDark)),
+                          ],
+                          actions: [
+                            RowAction(
+                              icon: Icons.delete_outline_rounded,
+                              tooltip: 'Delete account',
+                              color: AppColors.error,
+                              onPressed: () => _deleteStaff(m),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

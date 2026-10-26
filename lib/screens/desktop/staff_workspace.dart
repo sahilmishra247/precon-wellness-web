@@ -114,14 +114,12 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
   void _toggleList() => setState(() => _listHidden = !_listHidden);
 
   Future<void> _addClient() async {
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AddClientScreen()));
+    await showSideSheet(context, const AddClientScreen());
     _loadClients();
   }
 
   Future<void> _editClient(Client client) async {
-    final updated = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => EditClientScreen(client: client)),
-    );
+    final updated = await showSideSheet<bool>(context, EditClientScreen(client: client));
     if (updated == true) {
       setState(() => _detailVersion++);
       _loadClients();
