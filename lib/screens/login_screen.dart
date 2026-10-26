@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
@@ -14,6 +15,8 @@ import '../services/session_manager.dart';
 import '../services/api_config.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/confirm_exit_scope.dart';
+import '../widgets/auth_split_layout.dart';
+import '../layout/desktop.dart';
 import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -506,8 +509,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wide = isDesktopLayout(context);
 
     return ConfirmExitScope(
+      child: AuthSplitLayout(
       child: Scaffold(
         backgroundColor: AppColors.bg(isDark),
       body: SafeArea(
@@ -538,38 +543,65 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppColors.space32),
 
-                // Logo + wordmark
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/logo.png'),
-                      fit: BoxFit.cover,
+                if (wide)
+                  // The brand panel already shows the logo and name.
+                  SizedBox(
+                    width: 400,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome back',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(isDark),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: AppColors.space4),
+                        Text(
+                          'Sign in to continue.',
+                          style: TextStyle(fontSize: 15, color: AppColors.textSecondary(isDark)),
+                        ),
+                        const SizedBox(height: AppColors.space32),
+                      ],
+                    ),
+                  )
+                else ...[
+                  // Logo + wordmark
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/logo.png'),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppColors.space16),
+                  const SizedBox(height: AppColors.space16),
 
-                Text(
-                  'Precon Wellness',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(isDark),
-                    letterSpacing: -0.5,
+                  Text(
+                    'Precon Wellness',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(isDark),
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppColors.space4),
-                Text(
-                  'Professional health & fitness management',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary(isDark),
+                  const SizedBox(height: AppColors.space4),
+                  Text(
+                    'Professional health & fitness management',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary(isDark),
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppColors.space48),
+                  const SizedBox(height: AppColors.space48),
+                ],
 
                 // Form
                 ConstrainedBox(
@@ -688,6 +720,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
+                      // Demo passwords are for local testing only, never the live site.
+                      if (!kReleaseMode) ...[
                       const SizedBox(height: AppColors.space8),
                       Center(
                         child: TextButton(
@@ -701,6 +735,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+                      ],
                     ],
                   ),
                 ),
@@ -710,8 +745,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     ),
-  );
-}
+      ),
+    );
+  }
 
   Widget _label(String text, bool isDark) {
     return Text(

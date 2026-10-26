@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
+import '../widgets/auth_split_layout.dart';
 import 'email_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -228,7 +229,7 @@ class _SignupScreenState extends State<SignupScreen> {
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
 
-        return Scaffold(
+        return AuthSplitLayout(child: Scaffold(
           backgroundColor: AppColors.bg(isDark),
           appBar: AppBar(
             leading: IconButton(
@@ -407,7 +408,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }

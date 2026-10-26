@@ -5,7 +5,8 @@ class AppTheme {
   // ---------------------------------------------------------------------------
   // SHARED
   // ---------------------------------------------------------------------------
-  static const _fontFamily = null; // uses system font (SF Pro on iOS/Mac, Roboto on Android/Windows)
+  // Bundled (assets/fonts) so the app looks the same on every computer.
+  static const _fontFamily = 'Inter';
 
   static InputDecorationTheme _inputTheme(bool isDark) {
     final borderColor = AppColors.border(isDark);
@@ -39,16 +40,16 @@ class AppTheme {
         borderRadius: BorderRadius.circular(radius),
         borderSide: const BorderSide(color: AppColors.error, width: 1.5),
       ),
-      labelStyle: TextStyle(
+      labelStyle: TextStyle(fontFamily: _fontFamily, 
         color: AppColors.textSecondary(isDark),
         fontSize: 13,
         fontWeight: FontWeight.w400,
       ),
-      hintStyle: TextStyle(
+      hintStyle: TextStyle(fontFamily: _fontFamily, 
         color: AppColors.textMuted(isDark),
         fontSize: 14,
       ),
-      errorStyle: const TextStyle(
+      errorStyle: const TextStyle(fontFamily: _fontFamily, 
         color: AppColors.error,
         fontSize: 12,
       ),
@@ -67,7 +68,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppColors.radiusMedium),
         ),
-        textStyle: const TextStyle(
+        textStyle: const TextStyle(fontFamily: _fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0,
@@ -93,7 +94,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppColors.radiusMedium),
         ),
-        textStyle: const TextStyle(
+        textStyle: const TextStyle(fontFamily: _fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -106,7 +107,7 @@ class AppTheme {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
-        textStyle: const TextStyle(
+        textStyle: const TextStyle(fontFamily: _fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -138,7 +139,7 @@ class AppTheme {
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
       centerTitle: false,
-      titleTextStyle: TextStyle(
+      titleTextStyle: TextStyle(fontFamily: _fontFamily, 
         color: AppColors.textPrimary(isDark),
         fontSize: 16,
         fontWeight: FontWeight.w600,
@@ -159,13 +160,13 @@ class AppTheme {
         borderRadius: BorderRadius.circular(AppColors.radiusXL),
         side: BorderSide(color: AppColors.border(isDark)),
       ),
-      titleTextStyle: TextStyle(
+      titleTextStyle: TextStyle(fontFamily: _fontFamily, 
         color: AppColors.textPrimary(isDark),
         fontSize: 17,
         fontWeight: FontWeight.w600,
         letterSpacing: -0.2,
       ),
-      contentTextStyle: TextStyle(
+      contentTextStyle: TextStyle(fontFamily: _fontFamily, 
         color: AppColors.textSecondary(isDark),
         fontSize: 14,
         height: 1.5,
@@ -204,12 +205,12 @@ class AppTheme {
       textButtonTheme: _textButtonTheme(isDark),
       dialogTheme: _dialogTheme(isDark),
       listTileTheme: ListTileThemeData(
-        titleTextStyle: TextStyle(
+        titleTextStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textPrimary(isDark),
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        subtitleTextStyle: TextStyle(
+        subtitleTextStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textSecondary(isDark),
           fontSize: 13,
         ),
@@ -222,7 +223,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.lightTextPrimary,
-        contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
+        contentTextStyle: const TextStyle(fontFamily: _fontFamily, color: Colors.white, fontSize: 14),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
       ),
@@ -236,7 +237,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.lightBorderSubtle,
-        labelStyle: TextStyle(
+        labelStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textSecondary(isDark),
           fontSize: 13,
           fontWeight: FontWeight.w500,
@@ -289,12 +290,12 @@ class AppTheme {
       textButtonTheme: _textButtonTheme(isDark),
       dialogTheme: _dialogTheme(isDark),
       listTileTheme: ListTileThemeData(
-        titleTextStyle: TextStyle(
+        titleTextStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textPrimary(isDark),
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        subtitleTextStyle: TextStyle(
+        subtitleTextStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textSecondary(isDark),
           fontSize: 13,
         ),
@@ -307,7 +308,7 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.darkSurfaceElevated,
-        contentTextStyle: const TextStyle(
+        contentTextStyle: const TextStyle(fontFamily: _fontFamily, 
             color: AppColors.darkTextPrimary, fontSize: 14),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
@@ -322,7 +323,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.darkBorderSubtle,
-        labelStyle: TextStyle(
+        labelStyle: TextStyle(fontFamily: _fontFamily, 
           color: AppColors.textSecondary(isDark),
           fontSize: 13,
           fontWeight: FontWeight.w500,
