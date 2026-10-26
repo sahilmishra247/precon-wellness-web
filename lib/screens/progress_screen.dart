@@ -4,6 +4,8 @@ import '../models/progress_entry.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../utils/formatters.dart';
 import '../widgets/weight_chart.dart';
 import '../theme/app_colors.dart';
 
@@ -196,12 +198,146 @@ class _ProgressScreenState extends State<ProgressScreen> {
     );
   }
 
+  // Chart on the left, history on the right, logging in the toolbar.
+  Widget _buildDesktop(bool isDark) {
+    final start = widget.client.weight > 0 ? widget.client.weight : null;
+    final current = entries.isNotEmpty ? entries.first.weight : null;
+    final change = start != null && current != null ? current - start : null;
+
+    Widget stat(String label, String value, String? note) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface(isDark),
+              borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+              border: Border.all(color: AppColors.border(isDark)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary(isDark))),
+                const SizedBox(height: 4),
+                Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                if (note != null)
+                  Text(note, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark))),
+              ],
+            ),
+          ),
+        );
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                PaneToolbar(
+                  title: viewerIsClient ? 'Your progress' : 'Progress',
+                  subtitle: widget.readOnly && !viewerIsClient ? 'View only · ${entries.length} entries' : '${entries.length} entries',
+                  actions: [
+                    if (!widget.readOnly) ...[
+                      SizedBox(
+                        width: 150,
+                        child: TextField(
+                          controller: weightController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          onSubmitted: (_) => _addEntry(),
+                          decoration: const InputDecoration(hintText: 'Weight (kg)', isDense: true),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: isAdding ? null : _addEntry,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Log weight'),
+                      ),
+                    ],
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(children: [
+                        stat('Starting', start != null ? fmtKg(start) : '—', 'From profile'),
+                        const SizedBox(width: 12),
+                        stat('Current', current != null ? fmtKg(current) : '—',
+                            entries.isNotEmpty ? 'Logged ${fmtDay(entries.first.date)}' : null),
+                        const SizedBox(width: 12),
+                        stat('Change', change != null ? '${change > 0 ? '+' : change < 0 ? '−' : ''}${fmtKg(change.abs())}' : '—',
+                            'Since start'),
+                      ]),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface(isDark),
+                                borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+                                border: Border.all(color: AppColors.border(isDark)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Weight over time (kg)',
+                                      style: TextStyle(
+                                          fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                                  const SizedBox(height: 12),
+                                  WeightChart(entries: entries, baseline: start, isDark: isDark),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          SizedBox(
+                            width: 340,
+                            child: PaneTable(
+                              columns: const ['Date', 'Weight'],
+                              flex: const [3, 2],
+                              emptyText: 'No weights logged yet',
+                              rows: [
+                                for (final e in entries)
+                                  PaneTableRow(
+                                    cells: [
+                                      Text(fmtDay(e.date), style: paneCellStyle(isDark)),
+                                      Text(fmtKg(e.weight), style: paneCellStyle(isDark, strong: true)),
+                                    ],
+                                    actions: widget.readOnly
+                                        ? const []
+                                        : [
+                                            RowAction(
+                                              icon: Icons.delete_outline_rounded,
+                                              tooltip: 'Delete entry',
+                                              color: AppColors.error,
+                                              onPressed: () => _deleteEntry(e),
+                                            ),
+                                          ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
 class WorkoutPlanScreen extends StatefulWidget {
@@ -129,12 +130,75 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
     }
   }
 
+  Widget _buildDesktop(bool isDark) {
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                PaneToolbar(
+                  title: viewerIsClient ? 'Your workout' : 'Workout plan',
+                  subtitle: widget.readOnly && !viewerIsClient
+                      ? 'View only · ${exercises.length} exercises'
+                      : '${exercises.length} exercises',
+                  actions: [
+                    if (!widget.readOnly)
+                      FilledButton.icon(
+                        onPressed: () => _showExerciseDialog(),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Add exercise'),
+                      ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: PaneTable(
+                    columns: const ['Exercise', 'Sets', 'Reps'],
+                    flex: const [6, 2, 2],
+                    emptyText: 'No exercises added yet',
+                    rows: [
+                      for (final e in exercises)
+                        PaneTableRow(
+                          onTap: widget.readOnly ? null : () => _showExerciseDialog(exercise: e),
+                          cells: [
+                            Text(e.name, style: paneCellStyle(isDark, strong: true)),
+                            Text('${e.sets}', style: paneCellStyle(isDark)),
+                            Text('${e.reps}', style: paneCellStyle(isDark)),
+                          ],
+                          actions: widget.readOnly
+                              ? const []
+                              : [
+                                  RowAction(
+                                    icon: Icons.edit_outlined,
+                                    tooltip: 'Edit',
+                                    onPressed: () => _showExerciseDialog(exercise: e),
+                                  ),
+                                  RowAction(
+                                    icon: Icons.delete_outline_rounded,
+                                    tooltip: 'Remove',
+                                    color: AppColors.error,
+                                    onPressed: () => _deleteExercise(e),
+                                  ),
+                                ],
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),

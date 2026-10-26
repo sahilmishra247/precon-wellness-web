@@ -6,6 +6,8 @@ import '../services/client_service.dart';
 import '../services/session_manager.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
+import '../widgets/desktop_shell.dart';
+import '../utils/formatters.dart';
 import '../utils/url_helper.dart';
 import '../theme/app_colors.dart';
 
@@ -131,12 +133,109 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     return '${value.day}/${value.month}/${value.year} $hour:$minute';
   }
 
+  // Upcoming and past sessions as two tables; Schedule sits in the toolbar.
+  Widget _buildDesktop(bool isDark) {
+    final now = DateTime.now();
+    final upcoming = appointments.where((a) => !a.appointmentDate.isBefore(now)).toList()
+      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+    final past = appointments.where((a) => a.appointmentDate.isBefore(now)).toList()
+      ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+    final showClient = widget.client == null;
+
+    Widget table(List<Appointment> list, String empty) => PaneTable(
+          columns: [ 'When', if (showClient) 'Client', 'Notes', 'Call'],
+          flex: [3, if (showClient) 3, 4, 2],
+          emptyText: empty,
+          rows: [
+            for (final apt in list)
+              PaneTableRow(
+                onTap: widget.readOnly ? null : () => _showAppointmentDialog(appointment: apt),
+                cells: [
+                  Text(fmtDayTime(apt.appointmentDate), style: paneCellStyle(isDark, strong: true)),
+                  if (showClient) Text(_getClientDisplayName(apt.clientName), style: paneCellStyle(isDark)),
+                  Text(apt.notes.isEmpty ? '—' : apt.notes,
+                      style: paneCellStyle(isDark, muted: true), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: apt.meetingLink.isEmpty
+                        ? Text('—', style: paneCellStyle(isDark, muted: true))
+                        : TextButton.icon(
+                            onPressed: () => UrlHelper.openUrl(context, apt.meetingLink),
+                            icon: const Icon(Icons.videocam_outlined, size: 16),
+                            label: const Text('Join'),
+                          ),
+                  ),
+                ],
+                actions: widget.readOnly
+                    ? const []
+                    : [
+                        RowAction(
+                          icon: Icons.edit_outlined,
+                          tooltip: 'Edit',
+                          onPressed: () => _showAppointmentDialog(appointment: apt),
+                        ),
+                        RowAction(
+                          icon: Icons.delete_outline_rounded,
+                          tooltip: 'Delete',
+                          color: AppColors.error,
+                          onPressed: () => _deleteAppointment(apt),
+                        ),
+                      ],
+              ),
+          ],
+        );
+
+    Widget heading(String text) => Padding(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 10),
+          child: Text(text,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+        );
+
+    return Scaffold(
+      backgroundColor: AppColors.bg(isDark),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
+              children: [
+                PaneToolbar(
+                  title: viewerIsClient ? 'Your sessions' : showClient ? 'Appointments' : 'Sessions',
+                  subtitle: '${upcoming.length} upcoming · ${past.length} past',
+                  actions: [
+                    if (!widget.readOnly)
+                      FilledButton.icon(
+                        onPressed: () => _showAppointmentDialog(),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Schedule'),
+                      ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      heading('Upcoming'),
+                      table(upcoming, 'Nothing scheduled'),
+                      const SizedBox(height: 20),
+                      heading('Past'),
+                      table(past, 'No past sessions'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+
+        if (DesktopPaneScope.of(context)) return _buildDesktop(isDark);
 
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
