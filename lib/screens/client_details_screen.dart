@@ -4,6 +4,7 @@ import '../models/user_role.dart';
 import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
+import '../widgets/health_tags.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 import 'consultation_notes_screen.dart';
@@ -85,7 +86,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Container(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Container(
                         decoration: card,
                         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                           Padding(
@@ -119,6 +121,9 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                           _infoRow(Icons.circle_outlined, 'Status', c.isArchived ? 'Archived' : 'Active', isDark),
                         ]),
                       ),
+                      const SizedBox(height: 16),
+                      _healthCard(isDark),
+                      ]),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -240,6 +245,10 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   ]),
                   const SizedBox(height: 24),
 
+                  // ── Conditions and allergies ────────────────────────────
+                  _healthCard(isDark),
+                  const SizedBox(height: 24),
+
                   // ── Contact ─────────────────────────────────────────────
                   _sectionLabel('Contact information', isDark),
                   const SizedBox(height: 10),
@@ -299,6 +308,12 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       },
     );
   }
+
+  Widget _healthCard(bool isDark) => HealthInfoCard(
+        client: widget.client,
+        isDark: isDark,
+        isStaff: !widget.role.isClient,
+      );
 
   Widget _sectionLabel(String label, bool isDark) => Text(label,
       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: AppColors.textSecondary(isDark)));

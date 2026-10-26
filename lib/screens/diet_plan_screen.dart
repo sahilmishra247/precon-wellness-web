@@ -4,6 +4,7 @@ import '../models/food_item.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../utils/units.dart';
+import '../widgets/health_tags.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
@@ -246,6 +247,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
                         // ── Day Selector / Weekly Bar ────────────────────────
                         _buildDaySelectorBar(isDark),
                         Divider(height: 1, color: AppColors.border(isDark)),
+                        if (!viewerIsClient) HealthReminderStrip(client: widget.client, title: _healthStripTitle),
 
                         // ── Main Content: Single Day or Full Week View ───────
                         Expanded(
@@ -263,6 +265,8 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
   }
 
   // ── Desktop: whole week as a grid (days across, meals down) ──────────────
+  String get _healthStripTitle => 'Keep in mind for ${widget.client.fullName.split(' ').first}\'s diet';
+
   Widget _buildDesktopWeek(bool isDark) {
     final daily = allItems.where((i) => i.isDaily).length;
     final subtitle = viewerIsClient
@@ -274,6 +278,12 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PaneToolbar(title: viewerIsClient ? 'Your meals this week' : 'Week plan', subtitle: subtitle),
+        if (!viewerIsClient)
+          HealthReminderStrip(
+            client: widget.client,
+            title: _healthStripTitle,
+            margin: const EdgeInsets.fromLTRB(28, 0, 28, 14),
+          ),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),

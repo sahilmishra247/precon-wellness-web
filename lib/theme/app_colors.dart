@@ -62,6 +62,12 @@ abstract class AppColors {
   static const Color info = Color(0xFF2563EB);
   static const Color infoMuted = Color(0x142563EB);
 
+  // Health tags: "Take care" level (amber). "Must avoid" reuses coral.
+  static const Color cautionInkLight = Color(0xFFB45309);
+  static const Color cautionInkDark = Color(0xFFF0A54A);
+  static const Color cautionTintLight = Color(0xFFFEF3E2);
+  static const Color cautionTintDark = Color(0x21F0A54A);
+
   // ---------------------------------------------------------------------------
   // Spacing scale
   // ---------------------------------------------------------------------------
@@ -100,6 +106,9 @@ abstract class AppColors {
   static Color accentColor(bool isDark) => isDark ? accentLight : accent;
   static Color accentMuted(bool isDark) => isDark ? const Color(0x24E07A63) : accentTint;
   static Color accentInk(bool isDark) => isDark ? accentLight : accentInkLight;
+  static Color cautionInk(bool isDark) => isDark ? cautionInkDark : cautionInkLight;
+  static Color cautionMuted(bool isDark) => isDark ? cautionTintDark : cautionTintLight;
+  static Color neutralMuted(bool isDark) => isDark ? const Color(0xFF1E1E1E) : lightBorderSubtle;
   static Color brandMuted(bool isDark) =>
       isDark ? const Color(0x1F17A589) : primaryMuted;
 }
