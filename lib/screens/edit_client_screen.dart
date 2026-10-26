@@ -96,7 +96,7 @@ class _EditClientScreenState extends State<EditClientScreen> {
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
           appBar: SideSheetScope.of(context)
-              ? sideSheetAppBar(context, 'Edit client')
+              ? sideSheetAppBar(context, viewerIsClient ? 'Edit profile' : 'Edit client')
               : AppBar(
                   title: Text('Edit client', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
                   actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],

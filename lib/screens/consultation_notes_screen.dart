@@ -195,7 +195,15 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: timeline),
+                // Without the side box, keep lines to a readable length.
+                Expanded(
+                  child: widget.readOnly
+                      ? Align(
+                          alignment: Alignment.topLeft,
+                          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 880), child: timeline),
+                        )
+                      : timeline,
+                ),
                 if (!widget.readOnly)
                   Padding(
                     padding: const EdgeInsets.only(right: 32),
