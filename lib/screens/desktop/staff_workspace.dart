@@ -17,6 +17,7 @@ import '../progress_screen.dart';
 import '../staff_management_screen.dart';
 import '../workout_plan_screen.dart';
 import 'client_overview.dart';
+import '../../utils/error_messages.dart';
 
 enum _Section { clients, appointments, library, staff, archived }
 
@@ -88,7 +89,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load clients: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load clients: ${describeError(e)}')));
     }
   }
 
@@ -149,7 +150,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
       await _loadClients();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${client.fullName} archived')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
     }
   }
 

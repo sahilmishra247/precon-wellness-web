@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import 'add_client_screen.dart';
 import 'archived_clients_screen.dart';
 import 'client_details_screen.dart';
+import '../utils/error_messages.dart';
 
 class ClientsScreen extends StatefulWidget {
   final UserRole role;
@@ -44,7 +45,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load clients: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load clients: ${describeError(e)}')));
       }
     }
   }
@@ -82,7 +83,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
         await _loadClients();
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${client.fullName} archived')));
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
       }
     }
   }

@@ -7,6 +7,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_split_layout.dart';
 import 'login_screen.dart';
+import '../utils/error_messages.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -139,7 +140,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      setState(() { _isLoading = false; _errorMessage = 'Connection error: $e'; });
+      setState(() { _isLoading = false; _errorMessage = describeError(e); });
     }
   }
 
@@ -177,7 +178,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (!mounted) return;
       setState(() => _isResending = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Error: $e'),
+        content: Text(describeError(e)),
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
       ));

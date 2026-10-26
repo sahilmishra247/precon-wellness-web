@@ -6,6 +6,7 @@ import '../services/wellness_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class WorkoutPlanScreen extends StatefulWidget {
   final Client client;
@@ -80,7 +81,7 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error saving exercise: $e'),
+              content: Text('Error saving exercise: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -121,7 +122,7 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting exercise: $e'),
+              content: Text('Error deleting exercise: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );

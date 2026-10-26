@@ -7,6 +7,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_split_layout.dart';
 import 'email_verification_screen.dart';
+import '../utils/error_messages.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -203,7 +204,7 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
-      _showSnack('Error: $e', isError: true);
+      _showSnack(describeError(e), isError: true);
     }
   }
 

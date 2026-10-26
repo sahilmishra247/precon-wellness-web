@@ -8,6 +8,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class DietPlanScreen extends StatefulWidget {
   final Client client;
@@ -155,7 +156,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error saving food item: $e'),
+              content: Text('Error saving food item: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -196,7 +197,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting food item: $e'),
+              content: Text('Error deleting food item: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );

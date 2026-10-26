@@ -8,6 +8,7 @@ import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../widgets/weight_chart.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class ProgressScreen extends StatefulWidget {
   final Client client;
@@ -93,7 +94,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving weight entry: $e'),
+            content: Text('Error saving weight entry: ${describeError(e)}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -137,7 +138,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting entry: $e'),
+              content: Text('Error deleting entry: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );
