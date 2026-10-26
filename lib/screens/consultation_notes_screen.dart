@@ -7,6 +7,7 @@ import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class ConsultationNotesScreen extends StatefulWidget {
   final Client client;
@@ -81,7 +82,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving note: $e'),
+            content: Text('Error saving note: ${describeError(e)}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -112,7 +113,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error updating note: $e'),
+              content: Text('Error updating note: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -153,7 +154,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error deleting note: $e'),
+              content: Text('Error deleting note: ${describeError(e)}'),
               backgroundColor: AppColors.error,
             ),
           );

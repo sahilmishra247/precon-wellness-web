@@ -5,6 +5,7 @@ import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class EditClientScreen extends StatefulWidget {
   final Client client;
@@ -82,7 +83,7 @@ class _EditClientScreenState extends State<EditClientScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't save your changes. ${describeError(e)}"), backgroundColor: AppColors.error));
     }
   }
 

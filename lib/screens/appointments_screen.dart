@@ -10,6 +10,7 @@ import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../utils/url_helper.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   final Client? client;
@@ -45,7 +46,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load appointments: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load appointments: ${describeError(e)}')));
       }
     }
   }
@@ -95,7 +96,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         }
         await _loadData();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e)), backgroundColor: AppColors.error));
       }
     }
   }
@@ -122,7 +123,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         await _loadData();
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Appointment deleted')));
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
       }
     }
   }

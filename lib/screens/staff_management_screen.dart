@@ -6,6 +6,7 @@ import '../services/theme_service.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class StaffManagementScreen extends StatefulWidget {
   const StaffManagementScreen({super.key});
@@ -85,7 +86,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
         _loadStaff();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.error));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e)), backgroundColor: AppColors.error));
     }
   }
 
@@ -203,7 +204,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
                   } catch (e) {
                     setDialogState(() {
                       isSubmitting = false;
-                      dialogError = e.toString().contains('already exists') ? 'A user with this email already exists' : 'Failed: $e';
+                      dialogError = e.toString().contains('already exists') ? 'A user with this email already exists' : describeError(e);
                     });
                   }
                 },
