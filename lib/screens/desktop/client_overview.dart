@@ -171,11 +171,11 @@ class _ClientOverviewState extends State<ClientOverview> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.brandMuted(_dark),
+        color: AppColors.accentMuted(_dark),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label('Next session', color: AppColors.brand(_dark)),
+        _label('Next session', color: AppColors.accentInk(_dark)),
         const SizedBox(height: 6),
         if (next == null)
           Text('No upcoming sessions booked.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary(_dark)))
@@ -190,6 +190,7 @@ class _ClientOverviewState extends State<ClientOverview> {
           if (next.meetingLink.isNotEmpty) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.accentColor(_dark)),
               onPressed: () => UrlHelper.openUrl(context, next.meetingLink),
               icon: const Icon(Icons.video_call_rounded, size: 18),
               label: const Text('Join call'),
