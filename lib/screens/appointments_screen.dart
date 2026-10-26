@@ -38,7 +38,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final clientsList = await clientService.getClients(isArchived: false);
+      // The client list (GET /users) is staff-only and only feeds the add/edit dialog,
+      // so a read-only view (a client looking at their own sessions) skips it.
+      final clientsList = widget.readOnly ? <Client>[] : await clientService.getClients(isArchived: false);
       final appointmentsList = await appointmentService.getAppointments(clientEmail: widget.client?.email);
       if (mounted) {
         setState(() { activeClients = clientsList; appointments = appointmentsList; isLoading = false; });
