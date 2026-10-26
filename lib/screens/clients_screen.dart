@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/client.dart';
+import '../models/health_tag.dart';
 import '../models/user_role.dart';
 import '../services/client_service.dart';
+import '../services/health_service.dart';
 import '../services/theme_service.dart';
+import '../widgets/health_tags.dart';
 import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import 'add_client_screen.dart';
@@ -40,7 +43,15 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
   Future<void> _loadClients() async {
     try {
-      final clients = await _clientService.getClients(isArchived: false);
+      final results = await Future.wait([
+        _clientService.getClients(isArchived: false),
+        HealthService().getAllTags().catchError((_) => <String, List<HealthTag>>{}),
+      ]);
+      final clients = results[0] as List<Client>;
+      final tags = results[1] as Map<String, List<HealthTag>>;
+      for (final c in clients) {
+        c.healthTags = tags[c.email.toLowerCase()] ?? [];
+      }
       if (mounted) setState(() { _allClients = clients; _isLoading = false; });
     } catch (e) {
       if (mounted) {
@@ -56,6 +67,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
       if (c.isArchived) return false;
       return c.fullName.toLowerCase().contains(q) ||
           c.email.toLowerCase().contains(q) ||
+          c.healthTags.any((t) => t.label.toLowerCase().contains(q)) ||
           c.phoneNumber.contains(_query);
     }).toList();
   }
@@ -214,6 +226,10 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                                 Text(client.email, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
                                                 if (client.phoneNumber.isNotEmpty)
                                                   Text(client.phoneNumber, style: TextStyle(fontSize: 12, color: AppColors.textMuted(isDark))),
+                                                if (client.healthTags.isNotEmpty) ...[
+                                                  const SizedBox(height: 6),
+                                                  HealthTagRow(tags: client.healthTags, isDark: isDark, max: 3, small: true),
+                                                ],
                                               ],
                                             ),
                                           ),

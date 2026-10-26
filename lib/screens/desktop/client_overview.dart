@@ -3,16 +3,18 @@ import '../../models/appointment.dart';
 import '../../models/client.dart';
 import '../../models/exercise.dart';
 import '../../models/food_item.dart';
+import '../../models/health_tag.dart';
 import '../../models/note.dart';
 import '../../models/progress_entry.dart';
 import '../../services/appointment_service.dart';
 import '../../services/wellness_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/url_helper.dart';
+import '../../widgets/health_tags.dart';
 import '../../widgets/weight_chart.dart';
 
 /// Two-column summary of one client.
-/// Staff Overview tab: next session, today's meals and workout on the left;
+/// Staff Overview tab: next session, health notes, today's meals and workout on the left;
 /// weight numbers, chart and latest note on the right.
 /// Client home ([clientHome]): today's plan first, with no weight numbers or
 /// chart, so a slow week on the scale is not the first thing a client sees.
@@ -27,6 +29,9 @@ class ClientOverview extends StatefulWidget {
   final VoidCallback? onOpenProgress;
   final String progressActionLabel;
 
+  /// Staff view: called after the Health notes card changes the client's tags.
+  final ValueChanged<List<HealthTag>>? onHealthChanged;
+
   const ClientOverview({
     super.key,
     required this.client,
@@ -34,6 +39,7 @@ class ClientOverview extends StatefulWidget {
     this.clientHome = false,
     this.onOpenProgress,
     this.progressActionLabel = 'Open progress',
+    this.onHealthChanged,
   });
 
   @override
@@ -107,7 +113,7 @@ class _ClientOverviewState extends State<ClientOverview> {
             : [_numbers(), _chart(), _latestNote()];
         final side = home
             ? [_nextSession(), _latestNote(), _progressPrompt()]
-            : [_nextSession(), _todaysMeals(), _workout()];
+            : [_nextSession(), _healthNotes(), _todaysMeals(), _workout()];
 
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -165,6 +171,13 @@ class _ClientOverviewState extends State<ClientOverview> {
       ]),
     );
   }
+
+  Widget _healthNotes() => HealthInfoCard(
+        client: widget.client,
+        isDark: _dark,
+        isStaff: true,
+        onChanged: widget.onHealthChanged,
+      );
 
   Widget _nextSession() {
     final next = _upcoming.isNotEmpty ? _upcoming.first : null;

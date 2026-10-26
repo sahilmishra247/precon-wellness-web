@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../models/client.dart';
+import '../../models/health_tag.dart';
 import '../../models/user_role.dart';
 import '../../services/client_service.dart';
+import '../../services/health_service.dart';
 import '../../services/theme_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/confirm_exit_scope.dart';
 import '../../widgets/desktop_shell.dart';
+import '../../widgets/health_tags.dart';
 import '../add_client_screen.dart';
 import '../appointments_screen.dart';
 import '../archived_clients_screen.dart';
@@ -40,6 +43,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
   static const double _listWidth = 320;
 
   final ClientService _clientService = ClientService();
+  final HealthService _healthService = HealthService();
   final _searchController = TextEditingController();
 
   _Section _section = _Section.clients;
@@ -74,7 +78,16 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
 
   Future<void> _loadClients() async {
     try {
-      final clients = await _clientService.getClients(isArchived: false);
+      final results = await Future.wait([
+        _clientService.getClients(isArchived: false),
+        // Tags are a nice-to-have here; the list still loads without them.
+        _healthService.getAllTags().catchError((_) => <String, List<HealthTag>>{}),
+      ]);
+      final clients = results[0] as List<Client>;
+      final tags = results[1] as Map<String, List<HealthTag>>;
+      for (final c in clients) {
+        c.healthTags = tags[c.email.toLowerCase()] ?? [];
+      }
       clients.sort((a, b) => a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase()));
       if (!mounted) return;
       setState(() {
@@ -100,6 +113,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
         c.fullName.toLowerCase().contains(q) ||
         c.email.toLowerCase().contains(q) ||
         c.goal.toLowerCase().contains(q) ||
+        c.healthTags.any((t) => t.label.toLowerCase().contains(q)) ||
         c.phoneNumber.contains(_query)).toList();
   }
 
@@ -282,7 +296,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
             onChanged: (v) => setState(() => _query = v.trim()),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Search name, email, goal…',
+              hintText: 'Search name, goal or condition…',
               prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted(isDark)),
               suffixIcon: _query.isNotEmpty
                   ? IconButton(
@@ -344,6 +358,10 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
                 const SizedBox(height: 1),
                 Text(client.goal.isNotEmpty ? client.goal : client.email, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark))),
+                if (client.healthTags.isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  HealthTagRow(tags: client.healthTags, isDark: isDark, max: 2, small: true),
+                ],
               ]),
             ),
           ]),
@@ -421,6 +439,10 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark)),
                   ),
+                  if (client.healthTags.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    HealthTagRow(tags: client.healthTags, isDark: isDark),
+                  ],
                 ]),
               ),
               const SizedBox(width: 12),
@@ -508,6 +530,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
           isDark: isDark,
           onOpenProgress: widget.role.canViewProgress ? () => setState(() => _tab = _ClientTab.progress) : null,
           progressActionLabel: widget.role.canEditProgress ? 'Log weight' : 'Open progress',
+          onHealthChanged: (tags) => setState(() => client.healthTags = tags),
         );
       case _ClientTab.notes:
         return PaneNavigator(
