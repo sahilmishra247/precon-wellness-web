@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/client.dart';
 import '../models/food_item.dart';
+import '../models/meal_slot.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
 import '../utils/units.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
+import '../widgets/motion.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
 
+/// Weekly diet plan: one row per meal ("Meal 1 · 7:00 am"), days across.
+/// Staff can rename a row, change its time, add rows and delete them.
 class DietPlanScreen extends StatefulWidget {
   final Client client;
   final bool readOnly;
@@ -27,140 +30,128 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
   final WellnessService wellnessService = WellnessService();
   bool isLoading = true;
   List<FoodItem> allItems = [];
-
-  // Day filter: 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', or 'week' for full week
-  late String selectedDay;
+  List<MealSlot> slots = [];
 
   static const List<Map<String, String>> _daysOfWeek = [
-    {'key': 'mon', 'label': 'Mon', 'fullName': 'Monday'},
-    {'key': 'tue', 'label': 'Tue', 'fullName': 'Tuesday'},
-    {'key': 'wed', 'label': 'Wed', 'fullName': 'Wednesday'},
-    {'key': 'thu', 'label': 'Thu', 'fullName': 'Thursday'},
-    {'key': 'fri', 'label': 'Fri', 'fullName': 'Friday'},
-    {'key': 'sat', 'label': 'Sat', 'fullName': 'Saturday'},
-    {'key': 'sun', 'label': 'Sun', 'fullName': 'Sunday'},
-  ];
-
-  static const List<String> _mealTypes = [
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Snacks',
+    {'key': 'mon', 'label': 'Mon'},
+    {'key': 'tue', 'label': 'Tue'},
+    {'key': 'wed', 'label': 'Wed'},
+    {'key': 'thu', 'label': 'Thu'},
+    {'key': 'fri', 'label': 'Fri'},
+    {'key': 'sat', 'label': 'Sat'},
+    {'key': 'sun', 'label': 'Sun'},
   ];
 
   @override
   void initState() {
     super.initState();
-    selectedDay = _getTodayKey();
-    _loadDietItems();
+    _load();
   }
 
-  String _getTodayKey() {
-    switch (DateTime.now().weekday) {
-      case DateTime.monday:
-        return 'mon';
-      case DateTime.tuesday:
-        return 'tue';
-      case DateTime.wednesday:
-        return 'wed';
-      case DateTime.thursday:
-        return 'thu';
-      case DateTime.friday:
-        return 'fri';
-      case DateTime.saturday:
-        return 'sat';
-      case DateTime.sunday:
-        return 'sun';
-      default:
-        return 'mon';
-    }
-  }
+  String _getTodayKey() => _daysOfWeek[DateTime.now().weekday - 1]['key']!;
 
-  Future<void> _loadDietItems() async {
+  Future<void> _load() async {
     try {
-      final items = await wellnessService.getDietItems(widget.client.email);
-      if (mounted) {
-        setState(() {
-          allItems = items;
-          isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          allItems = [
-            ...widget.client.breakfastItems,
-            ...widget.client.lunchItems,
-            ...widget.client.dinnerItems,
-            ...widget.client.snacksItems,
-          ];
-          isLoading = false;
-        });
-      }
+      final results = await Future.wait([
+        wellnessService.getMealSlots(widget.client.email),
+        wellnessService.getDietItems(widget.client.email),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        slots = (results[0] as List<MealSlot>)..sort(MealSlot.byTime);
+        allItems = results[1] as List<FoodItem>;
+        isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      _snack('Could not load the diet plan: $e', error: true);
     }
   }
 
-  List<FoodItem> _getItemsForDayAndMeal(String dayKey, String mealType) {
-    return allItems.where((item) {
-      final matchesMeal =
-          (item.mealType ?? '').toLowerCase() == mealType.toLowerCase();
-      if (!matchesMeal) return false;
+  void _snack(String message, {bool error = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: error ? AppColors.error : null),
+    );
+  }
 
+  List<FoodItem> _itemsFor(String dayKey, MealSlot slot) {
+    return allItems.where((item) {
+      if ((item.mealType ?? '').toLowerCase() != slot.key) return false;
       final itemDay = item.dayOfWeek.toLowerCase();
-      // 'all' items apply to every day
-      return itemDay == 'all' || itemDay == dayKey.toLowerCase();
+      return itemDay == 'all' || itemDay == dayKey;
     }).toList();
   }
 
-  int _countItemsForDay(String dayKey) {
-    return allItems.where((item) {
-      final itemDay = item.dayOfWeek.toLowerCase();
-      return itemDay == 'all' || itemDay == dayKey.toLowerCase();
-    }).length;
+  // ── Meal rows ─────────────────────────────────────────────────────────────
+
+  Future<void> _addRow() async {
+    final result = await showDialog<_RowResult>(
+      context: context,
+      builder: (_) => _MealRowDialog(suggestedTitle: 'Meal ${slots.length + 1}'),
+    );
+    if (result == null || !mounted) return;
+    try {
+      await wellnessService.createMealSlot(clientEmail: widget.client.email, title: result.title, time: result.time);
+      await _load();
+    } catch (e) {
+      _snack('Could not add the meal row: $e', error: true);
+    }
   }
 
-  Future<void> _showFoodDialog(String mealType, {FoodItem? item, String? day}) async {
-    final defaultDay = day ?? (selectedDay == 'week' ? 'all' : selectedDay);
+  Future<void> _editRow(MealSlot slot) async {
+    final result = await showDialog<_RowResult>(
+      context: context,
+      builder: (_) => _MealRowDialog(slot: slot, suggestedTitle: slot.title),
+    );
+    if (result == null || !mounted) return;
+    try {
+      if (result.delete) {
+        await wellnessService.deleteMealSlot(slot.id);
+      } else {
+        await wellnessService.updateMealSlot(id: slot.id, title: result.title, time: result.time);
+      }
+      await _load();
+    } catch (e) {
+      _snack('Could not save the meal row: $e', error: true);
+    }
+  }
+
+  // ── Food items ────────────────────────────────────────────────────────────
+
+  Future<void> _showFoodDialog(MealSlot slot, {FoodItem? item, String? day}) async {
     final result = await showDialog<FoodItem>(
       context: context,
       builder: (_) => _FoodItemDialog(
-        mealType: mealType,
+        mealType: slot.key,
+        mealLabel: slot.label,
         item: item,
-        initialDay: item?.dayOfWeek ?? defaultDay,
+        initialDay: item?.dayOfWeek ?? day ?? 'all',
       ),
     );
-
-    if (result != null && mounted) {
-      try {
-        if (item == null) {
-          await wellnessService.createDietItem(
-            clientEmail: widget.client.email,
-            mealType: mealType,
-            name: result.name,
-            amount: result.amount,
-            unit: result.unit,
-            dayOfWeek: result.dayOfWeek,
-          );
-        } else if (item.id != null) {
-          await wellnessService.updateDietItem(
-            id: item.id!,
-            name: result.name,
-            amount: result.amount,
-            unit: result.unit,
-            dayOfWeek: result.dayOfWeek,
-          );
-        }
-        await _loadDietItems();
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error saving food item: $e'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+    if (result == null || !mounted) return;
+    try {
+      if (item == null) {
+        await wellnessService.createDietItem(
+          clientEmail: widget.client.email,
+          mealType: slot.key,
+          name: result.name,
+          amount: result.amount,
+          unit: result.unit,
+          dayOfWeek: result.dayOfWeek,
+        );
+      } else if (item.id != null) {
+        await wellnessService.updateDietItem(
+          id: item.id!,
+          name: result.name,
+          amount: result.amount,
+          unit: result.unit,
+          dayOfWeek: result.dayOfWeek,
+        );
       }
+      await _load();
+    } catch (e) {
+      _snack('Error saving food item: $e', error: true);
     }
   }
 
@@ -169,12 +160,9 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove food item?'),
-        content: Text('Remove "${item.name}" from meal plan?'),
+        content: Text('Remove "${item.name}" from the meal plan?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
@@ -183,27 +171,16 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
         ],
       ),
     );
-
-    if (confirm == true) {
-      try {
-        if (item.id != null) {
-          await wellnessService.deleteDietItem(item.id!);
-          await _loadDietItems();
-        } else {
-          setState(() => allItems.remove(item));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting food item: $e'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      }
+    if (confirm != true || item.id == null) return;
+    try {
+      await wellnessService.deleteDietItem(item.id!);
+      await _load();
+    } catch (e) {
+      _snack('Error deleting food item: $e', error: true);
     }
   }
+
+  // ── Layout ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -211,148 +188,200 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       listenable: ThemeService.instance,
       builder: (context, _) {
         final isDark = ThemeService.instance.isDark(context);
+        final desktop = DesktopPaneScope.of(context);
+        final body = isLoading ? const Center(child: CircularProgressIndicator()) : _content(isDark, desktop);
 
-        if (DesktopPaneScope.of(context)) {
-          return Scaffold(
-            backgroundColor: AppColors.bg(isDark),
-            body: isLoading ? const Center(child: CircularProgressIndicator()) : _buildDesktopWeek(isDark),
-          );
+        if (desktop) {
+          return Scaffold(backgroundColor: AppColors.bg(isDark), body: body);
         }
-
         return Scaffold(
           backgroundColor: AppColors.bg(isDark),
-          appBar: AppBar(
-            title: Text(
-              '${widget.client.fullName} Diet Plan',
-              style: TextStyle(
-                color: AppColors.textPrimary(isDark),
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-            actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
-            ],
-          ),
-          body: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── Day Selector / Weekly Bar ────────────────────────
-                        _buildDaySelectorBar(isDark),
-                        Divider(height: 1, color: AppColors.border(isDark)),
-
-                        // ── Main Content: Single Day or Full Week View ───────
-                        Expanded(
-                          child: selectedDay == 'week'
-                              ? _buildFullWeekView(isDark)
-                              : _buildSingleDayView(selectedDay, isDark),
-                        ),
-                      ],
-                    ),
-                  ),
+          appBar: AppBar(title: Text('${widget.client.fullName} · Diet plan')),
+          floatingActionButton: widget.readOnly || isLoading
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Add meal row'),
                 ),
+          body: body,
         );
       },
     );
   }
 
-  // ── Desktop: whole week as a grid (days across, meals down) ──────────────
-  Widget _buildDesktopWeek(bool isDark) {
-    final daily = allItems.where((i) => i.isDaily).length;
+  Widget _content(bool isDark, bool desktop) {
+    final count = allItems.length;
     final subtitle = viewerIsClient
-        ? '${allItems.length} items, planned by your care team'
+        ? '$count ${count == 1 ? 'item' : 'items'}, planned by your care team'
         : widget.readOnly
-        ? 'View only · ${allItems.length} items'
-        : '${allItems.length} items · $daily on every day · click an item to edit it';
+            ? 'View only · ${slots.length} ${slots.length == 1 ? 'meal' : 'meals'} a day'
+            : '${slots.length} ${slots.length == 1 ? 'meal' : 'meals'} a day · tap a meal to rename it or change its time';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PaneToolbar(title: viewerIsClient ? 'Your meals this week' : 'Week plan', subtitle: subtitle),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
-            child: LayoutBuilder(builder: (context, constraints) {
-              const minWidth = 96.0 + 7 * 128;
-              final grid = _weekGrid(isDark);
-              if (constraints.maxWidth >= minWidth) return grid;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(width: minWidth, child: grid),
-              );
-            }),
+        if (desktop)
+          PaneToolbar(
+            title: viewerIsClient ? 'Your meals this week' : 'Week plan',
+            subtitle: subtitle,
+            actions: [
+              if (!widget.readOnly)
+                FilledButton.icon(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add meal row'),
+                ),
+            ],
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Text(subtitle, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
           ),
+        Expanded(
+          child: slots.isEmpty
+              ? Center(
+                  child: Text(
+                    widget.readOnly ? 'No meals planned yet.' : 'No meal rows yet. Add one to start the plan.',
+                    style: TextStyle(fontSize: 14, color: AppColors.textSecondary(isDark)),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(desktop ? 28 : 12, 0, desktop ? 28 : 12, 96),
+                  child: LayoutBuilder(builder: (context, constraints) {
+                    final headerWidth = desktop ? 150.0 : 118.0;
+                    final minWidth = headerWidth + 7 * 124;
+                    final grid = _weekGrid(isDark, headerWidth);
+                    if (constraints.maxWidth >= minWidth) return grid;
+                    // Narrow windows and phones scroll the week sideways.
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(width: minWidth, child: grid),
+                    );
+                  }),
+                ),
         ),
       ],
     );
   }
 
-  Widget _weekGrid(bool isDark) {
+  Widget _weekGrid(bool isDark, double headerWidth) {
     final todayKey = _getTodayKey();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: [
-          const SizedBox(width: 96),
+          SizedBox(width: headerWidth),
           for (final day in _daysOfWeek)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                child: Text(
-                  day['key'] == todayKey ? '${day['label']} · Today' : day['label']!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: day['key'] == todayKey ? AppColors.brand(isDark) : AppColors.textPrimary(isDark),
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Row(children: [
+                  Text(
+                    day['label']!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: day['key'] == todayKey ? AppColors.brand(isDark) : AppColors.textPrimary(isDark),
+                    ),
                   ),
-                ),
+                  if (day['key'] == todayKey) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(color: AppColors.leafTint, borderRadius: BorderRadius.circular(8)),
+                      child: const Text('Today',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.leafInk)),
+                    ),
+                  ],
+                ]),
               ),
             ),
         ]),
-        for (final meal in _mealTypes)
-          // Every cell in a meal row grows to the tallest one.
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 96,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 16, 8, 0),
-                    child: Text(
-                      meal.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                        color: AppColors.textSecondary(isDark),
-                      ),
-                    ),
-                  ),
-                ),
-                for (final day in _daysOfWeek)
-                  Expanded(child: _weekCell(day['key']!, meal, day['key'] == todayKey, isDark)),
-              ],
+        for (var i = 0; i < slots.length; i++)
+          FadeSlideIn(
+            index: i,
+            // Every cell in a meal row grows to the tallest one.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(width: headerWidth, child: _rowHeader(slots[i], isDark)),
+                  for (final day in _daysOfWeek)
+                    Expanded(child: _weekCell(day['key']!, slots[i], day['key'] == todayKey, isDark)),
+                ],
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _weekCell(String dayKey, String meal, bool isToday, bool isDark) {
-    final items = _getItemsForDayAndMeal(dayKey, meal);
+  Widget _rowHeader(MealSlot slot, bool isDark) {
+    final canEdit = !widget.readOnly;
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+              child: Text(slot.title.isEmpty ? 'Meal' : slot.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary(isDark))),
+            ),
+            if (canEdit) Icon(Icons.edit_outlined, size: 14, color: AppColors.diet.ink),
+          ]),
+          const SizedBox(height: 6),
+          if (slot.displayTime.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.schedule_rounded, size: 13, color: AppColors.diet.ink),
+                const SizedBox(width: 4),
+                Text(slot.displayTime,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.diet.ink)),
+              ]),
+            )
+          else if (canEdit)
+            Text('Set a time', style: TextStyle(fontSize: 12, color: AppColors.textMuted(isDark))),
+        ],
+      ),
+    );
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 4, 6, 4),
+      decoration: BoxDecoration(
+        color: AppColors.diet.tint,
+        borderRadius: BorderRadius.circular(AppColors.radiusMedium),
+        border: Border.all(color: AppColors.diet.color.withValues(alpha: 0.25)),
+      ),
+      child: canEdit
+          ? Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppColors.radiusMedium),
+                onTap: () => _editRow(slot),
+                child: content,
+              ),
+            )
+          : content,
+    );
+  }
+
+  Widget _weekCell(String dayKey, MealSlot slot, bool isToday, bool isDark) {
+    final items = _itemsFor(dayKey, slot);
     return Container(
       margin: const EdgeInsets.all(4),
       padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
-      constraints: const BoxConstraints(minHeight: 72),
+      constraints: const BoxConstraints(minHeight: 76),
       decoration: BoxDecoration(
         color: isToday ? AppColors.brandMuted(isDark) : AppColors.surface(isDark),
-        borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-        border: Border.all(color: AppColors.border(isDark)),
+        borderRadius: BorderRadius.circular(AppColors.radiusMedium),
+        border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -361,7 +390,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
             _GridFoodItem(
               item: item,
               isDark: isDark,
-              onEdit: widget.readOnly ? null : () => _showFoodDialog(meal, item: item),
+              onEdit: widget.readOnly ? null : () => _showFoodDialog(slot, item: item),
               onDelete: widget.readOnly ? null : () => _deleteFoodItem(item),
             ),
           if (items.isEmpty && widget.readOnly)
@@ -370,616 +399,137 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
               child: Text('—', style: TextStyle(color: AppColors.textMuted(isDark))),
             ),
           if (!widget.readOnly)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _showFoodDialog(meal, day: dayKey),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  minimumSize: const Size(0, 30),
-                  foregroundColor: AppColors.textSecondary(isDark),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-                icon: const Icon(Icons.add_rounded, size: 15),
-                label: const Text('Add'),
-              ),
+            _CellAddButton(
+              isDark: isDark,
+              onPressed: () => _showFoodDialog(slot, day: dayKey),
             ),
         ],
       ),
     );
   }
+}
 
-  // ── Day Selector Bar ───────────────────────────────────────────────────────
-  Widget _buildDaySelectorBar(bool isDark) {
-    final todayKey = _getTodayKey();
+// ── Add / Edit meal row ──────────────────────────────────────────────────────
+class _RowResult {
+  final String title;
+  final String time;
+  final bool delete;
+  const _RowResult(this.title, this.time, {this.delete = false});
+}
 
-    return Container(
-      color: AppColors.surface(isDark),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            // Days of the week (Mon–Sun)
-            for (final day in _daysOfWeek) ...[
-              _dayChip(
-                key: day['key']!,
-                label: day['label']!,
-                isToday: day['key'] == todayKey,
-                isSelected: selectedDay == day['key'],
-                count: _countItemsForDay(day['key']!),
-                isDark: isDark,
-              ),
-              const SizedBox(width: 8),
-            ],
+class _MealRowDialog extends StatefulWidget {
+  final MealSlot? slot;
+  final String suggestedTitle;
+  const _MealRowDialog({this.slot, required this.suggestedTitle});
 
-            Container(
-              height: 24,
-              width: 1,
-              color: AppColors.border(isDark),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-            const SizedBox(width: 4),
+  @override
+  State<_MealRowDialog> createState() => _MealRowDialogState();
+}
 
-            // Full Week button
-            InkWell(
-              onTap: () => setState(() => selectedDay = 'week'),
-              borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: selectedDay == 'week'
-                      ? AppColors.brand(isDark)
-                      : AppColors.brandMuted(isDark),
-                  borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-                  border: Border.all(
-                    color: selectedDay == 'week'
-                        ? AppColors.brand(isDark)
-                        : Colors.transparent,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.view_week_outlined,
-                      size: 16,
-                      color: selectedDay == 'week'
-                          ? Colors.white
-                          : AppColors.brand(isDark),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Full Week',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: selectedDay == 'week'
-                            ? Colors.white
-                            : AppColors.brand(isDark),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+class _MealRowDialogState extends State<_MealRowDialog> {
+  late final TextEditingController _title = TextEditingController(text: widget.suggestedTitle);
+  TimeOfDay? _time;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = (widget.slot?.time ?? '').split(':');
+    if (parts.length == 2) {
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h != null && m != null) _time = TimeOfDay(hour: h, minute: m);
+    }
+    _time ??= widget.slot == null ? const TimeOfDay(hour: 7, minute: 0) : null;
   }
 
-  Widget _dayChip({
-    required String key,
-    required String label,
-    required bool isToday,
-    required bool isSelected,
-    required int count,
-    required bool isDark,
-  }) {
-    final bg = isSelected
-        ? AppColors.brand(isDark)
-        : AppColors.surface(isDark);
-    final textColor = isSelected
-        ? Colors.white
-        : AppColors.textPrimary(isDark);
-    final borderColor = isSelected
-        ? AppColors.brand(isDark)
-        : (isToday ? AppColors.brand(isDark) : AppColors.border(isDark));
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
 
-    return InkWell(
-      onTap: () => setState(() => selectedDay = key),
-      borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 46),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-          border: Border.all(
-            color: borderColor,
-            width: isToday && !isSelected ? 1.5 : 1,
+  String get _timeValue =>
+      _time == null ? '' : '${_time!.hour.toString().padLeft(2, '0')}:${_time!.minute.toString().padLeft(2, '0')}';
+
+  String get _timeLabel => _time == null
+      ? 'No time set'
+      : MealSlot(id: 0, title: '', time: _timeValue).displayTime;
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _time ?? const TimeOfDay(hour: 7, minute: 0));
+    if (picked != null) setState(() => _time = picked);
+  }
+
+  Future<void> _confirmDelete() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this meal row?'),
+        content: const Text('The row and every food item in it are removed from all seven days.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
           ),
-        ),
+        ],
+      ),
+    );
+    if (ok == true && mounted) Navigator.pop(context, const _RowResult('', '', delete: true));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.slot == null ? 'Add meal row' : 'Edit meal row'),
+      content: SizedBox(
+        width: 380,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+            TextField(
+              controller: _title,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Title', hintText: 'Meal 1'),
+              onSubmitted: (_) => Navigator.pop(context, _RowResult(_title.text.trim(), _timeValue)),
             ),
-            const SizedBox(height: 2),
-            if (isToday)
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : AppColors.brand(isDark),
-                  shape: BoxShape.circle,
-                ),
-              )
-            else
-              Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white.withValues(alpha: 0.8)
-                      : AppColors.textMuted(isDark),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickTime,
+                  icon: Icon(Icons.schedule_rounded, size: 18, color: AppColors.diet.ink),
+                  label: Text(_timeLabel),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Single Day View ────────────────────────────────────────────────────────
-  Widget _buildSingleDayView(String dayKey, bool isDark) {
-    final dayInfo = _daysOfWeek.firstWhere((d) => d['key'] == dayKey);
-    final isToday = dayKey == _getTodayKey();
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      children: [
-        // Day Banner
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.brandMuted(isDark),
-            borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-            border: Border.all(color: AppColors.brand(isDark).withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.brand(isDark)),
-              const SizedBox(width: 8),
-              Text(
-                dayInfo['fullName']!,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: AppColors.brand(isDark),
-                ),
-              ),
-              if (isToday) ...[
+              if (_time != null) ...[
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.brand(isDark),
-                    borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-                  ),
-                  child: const Text(
-                    'TODAY',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
+                IconButton(
+                  tooltip: 'Clear time',
+                  onPressed: () => setState(() => _time = null),
+                  icon: const Icon(Icons.close_rounded, size: 18),
                 ),
               ],
-              const Spacer(),
-              Text(
-                '${_countItemsForDay(dayKey)} total items',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark)),
-              ),
-            ],
-          ),
-        ),
-
-        // Meal Sections
-        _mealSection('Breakfast', Icons.wb_sunny_outlined, dayKey, isDark),
-        _mealSection('Lunch', Icons.restaurant_outlined, dayKey, isDark),
-        _mealSection('Dinner', Icons.nights_stay_outlined, dayKey, isDark),
-        _mealSection('Snacks', Icons.apple_outlined, dayKey, isDark),
-      ],
-    );
-  }
-
-  // ── Full Week Overview ─────────────────────────────────────────────────────
-  Widget _buildFullWeekView(bool isDark) {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Complete Weekly Schedule',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary(isDark),
-              letterSpacing: -0.3,
-            ),
-          ),
-        ),
-        for (final day in _daysOfWeek) ...[
-          _buildDayWeekCard(day['key']!, day['fullName']!, isDark),
-          const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildDayWeekCard(String dayKey, String dayName, bool isDark) {
-    final isToday = dayKey == _getTodayKey();
-    final dayItems = allItems.where((item) {
-      final itemDay = item.dayOfWeek.toLowerCase();
-      return itemDay == 'all' || itemDay == dayKey.toLowerCase();
-    }).toList();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface(isDark),
-        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(
-          color: isToday ? AppColors.brand(isDark) : AppColors.border(isDark),
-          width: isToday ? 1.5 : 1,
-        ),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: isToday,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isToday
-                  ? AppColors.brandMuted(isDark)
-                  : AppColors.surface(isDark),
-              borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-              border: Border.all(
-                color: isToday
-                    ? AppColors.brand(isDark)
-                    : AppColors.border(isDark),
-              ),
-            ),
-            child: Icon(
-              Icons.calendar_today_rounded,
-              size: 16,
-              color: isToday
-                  ? AppColors.brand(isDark)
-                  : AppColors.textSecondary(isDark),
-            ),
-          ),
-          title: Row(
-            children: [
-              Text(
-                dayName,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(isDark),
-                ),
-              ),
-              if (isToday) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.brand(isDark),
-                    borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-                  ),
-                  child: const Text(
-                    'TODAY',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          trailing: Text(
-            '${dayItems.length} items',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary(isDark),
-            ),
-          ),
-          children: [
-            Divider(height: 1, color: AppColors.border(isDark)),
-            if (dayItems.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'No meals scheduled for $dayName.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(isDark),
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Column(
-                  children: [
-                    for (final meal in _mealTypes) ...[
-                      _buildMiniMealRow(dayKey, meal, isDark),
-                    ],
-                  ],
-                ),
-              ),
+            ]),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMiniMealRow(String dayKey, String mealType, bool isDark) {
-    final items = _getItemsForDayAndMeal(dayKey, mealType);
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            mealType,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.brand(isDark),
-            ),
+      actions: [
+        if (widget.slot != null)
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: _confirmDelete,
+            child: const Text('Delete row'),
           ),
-          const SizedBox(height: 4),
-          for (final item in items)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 3),
-              child: Row(
-                children: [
-                  Text(
-                    '• ',
-                    style: TextStyle(
-                      color: AppColors.textSecondary(isDark),
-                      fontSize: 14,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${item.name} (${item.amount} ${item.unit})',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textPrimary(isDark),
-                      ),
-                    ),
-                  ),
-                  if (item.isDaily)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: AppColors.border(isDark),
-                        borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-                      ),
-                      child: Text(
-                        'Daily',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textSecondary(isDark),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ── Meal Section (Accordion) ───────────────────────────────────────────────
-  Widget _mealSection(String title, IconData icon, String dayKey, bool isDark) {
-    final items = _getItemsForDayAndMeal(dayKey, title);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: AppColors.surface(isDark),
-        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(isDark)),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: title == 'Breakfast',
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.brandMuted(isDark),
-              borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-            ),
-            child: Icon(icon, size: 18, color: AppColors.brand(isDark)),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary(isDark),
-            ),
-          ),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.brandMuted(isDark),
-              borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-            ),
-            child: Text(
-              '${items.length} ${items.length == 1 ? 'item' : 'items'}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.brand(isDark),
-              ),
-            ),
-          ),
-          children: [
-            Divider(height: 1, color: AppColors.border(isDark)),
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  'No food items added for this meal.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary(isDark),
-                  ),
-                ),
-              ),
-            for (var index = 0; index < items.length; index++) ...[
-              if (index > 0)
-                Divider(
-                  height: 1,
-                  indent: 52,
-                  color: AppColors.border(isDark),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.brandMuted(isDark),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.brand(isDark),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  items[index].name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                    color: AppColors.textPrimary(isDark),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (items[index].isDaily) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.brandMuted(isDark),
-                                    borderRadius: BorderRadius.circular(AppColors.radiusSmall),
-                                  ),
-                                  child: Text(
-                                    'Daily',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.brand(isDark),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${items[index].amount} ${items[index].unit}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(isDark),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!widget.readOnly)
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert_rounded,
-                          size: 18,
-                          color: AppColors.textMuted(isDark),
-                        ),
-                        onSelected: (action) {
-                          if (action == 'edit') {
-                            _showFoodDialog(title, item: items[index]);
-                          } else if (action == 'delete') {
-                            _deleteFoodItem(items[index]);
-                          }
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Delete', style: TextStyle(color: AppColors.error)),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ],
-            if (!widget.readOnly)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showFoodDialog(title),
-                    icon: const Icon(Icons.add_rounded, size: 16),
-                    label: Text('Add $title item'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _RowResult(_title.text.trim(), _timeValue)),
+          child: Text(widget.slot == null ? 'Add row' : 'Save'),
         ),
-      ),
+      ],
     );
   }
 }
@@ -987,11 +537,13 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
 // ── Add / Edit Food Dialog ───────────────────────────────────────────────────
 class _FoodItemDialog extends StatefulWidget {
   final String mealType;
+  final String mealLabel;
   final FoodItem? item;
   final String initialDay;
 
   const _FoodItemDialog({
     required this.mealType,
+    required this.mealLabel,
     this.item,
     required this.initialDay,
   });
@@ -1058,7 +610,7 @@ class _FoodItemDialogState extends State<_FoodItemDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.item == null
-          ? 'Add ${widget.mealType} item'
+          ? 'Add to ${widget.mealLabel}'
           : 'Edit food item'),
       content: SizedBox(
         width: double.maxFinite,
@@ -1193,6 +745,56 @@ class _GridFoodItemState extends State<_GridFoodItem> {
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// "+" in every week-grid cell. Shows only a muted icon until the pointer is
+/// over it, so a mostly empty week doesn't repeat "Add" 28 times.
+class _CellAddButton extends StatefulWidget {
+  final bool isDark;
+  final VoidCallback onPressed;
+  const _CellAddButton({required this.isDark, required this.onPressed});
+
+  @override
+  State<_CellAddButton> createState() => _CellAddButtonState();
+}
+
+class _CellAddButtonState extends State<_CellAddButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hover ? AppColors.brand(widget.isDark) : AppColors.textMuted(widget.isDark);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: Tooltip(
+          message: 'Add',
+          child: TextButton(
+            onPressed: widget.onPressed,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: const Size(32, 32),
+              foregroundColor: color,
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.add_rounded, size: 16, color: color),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOut,
+                child: _hover
+                    ? const Padding(padding: EdgeInsets.only(left: 4), child: Text('Add'))
+                    : const SizedBox.shrink(),
+              ),
+            ]),
           ),
         ),
       ),

@@ -1,6 +1,7 @@
 import 'api_config.dart';
 import '../models/note.dart';
 import '../models/food_item.dart';
+import '../models/meal_slot.dart';
 import '../models/exercise.dart';
 import '../models/progress_entry.dart';
 
@@ -97,6 +98,36 @@ class WellnessService {
 
   Future<void> deleteDietItem(int id) async {
     await ApiConfig.dio.delete('/diet/$id');
+  }
+
+  // ===========================================================================
+  // MEAL ROWS (rows of the weekly diet grid)
+  // ===========================================================================
+  Future<List<MealSlot>> getMealSlots(String clientEmail) async {
+    final response = await ApiConfig.dio.get('/meal-slots/$clientEmail');
+    final List<dynamic> data = response.data;
+    return data.map((json) => MealSlot.fromJson(json as Map<String, dynamic>)).toList();
+  }
+
+  Future<MealSlot> createMealSlot({required String clientEmail, required String title, String time = ''}) async {
+    final response = await ApiConfig.dio.post('/meal-slots', data: {
+      'client_email': clientEmail.trim().toLowerCase(),
+      'title': title.trim(),
+      'time': time.trim(),
+    });
+    return MealSlot.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<MealSlot> updateMealSlot({required int id, String? title, String? time}) async {
+    final response = await ApiConfig.dio.put('/meal-slots/$id', data: {
+      if (title != null) 'title': title.trim(),
+      if (time != null) 'time': time.trim(),
+    });
+    return MealSlot.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteMealSlot(int id) async {
+    await ApiConfig.dio.delete('/meal-slots/$id');
   }
 
   // ===========================================================================

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import '../widgets/motion.dart';
 
 import 'package:flutter/material.dart';
 import '../models/progress_entry.dart';
@@ -24,8 +25,29 @@ class WeightChart extends StatefulWidget {
   State<WeightChart> createState() => _WeightChartState();
 }
 
-class _WeightChartState extends State<WeightChart> {
+class _WeightChartState extends State<WeightChart> with SingleTickerProviderStateMixin {
   int? _selected;
+
+  // Reveals the line from left to right when the chart first appears.
+  late final AnimationController _reveal =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reveal.status != AnimationStatus.dismissed) return;
+    if (Motion.off(context)) {
+      _reveal.value = 1;
+    } else {
+      _reveal.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _reveal.dispose();
+    super.dispose();
+  }
 
   List<ProgressEntry> get _sorted =>
       [...widget.entries]..sort((a, b) => a.date.compareTo(b.date));
@@ -53,13 +75,17 @@ class _WeightChartState extends State<WeightChart> {
             behavior: HitTestBehavior.opaque,
             onTapDown: (d) => _select(d.localPosition, size),
             onHorizontalDragUpdate: (d) => _select(d.localPosition, size),
-            child: CustomPaint(
-              size: size,
-              painter: _WeightChartPainter(
-                entries: sorted,
-                baseline: widget.baseline,
-                selected: _selected != null && _selected! < sorted.length ? _selected : null,
-                isDark: widget.isDark,
+            child: AnimatedBuilder(
+              animation: _reveal,
+              builder: (context, _) => CustomPaint(
+                size: size,
+                painter: _WeightChartPainter(
+                  entries: sorted,
+                  baseline: widget.baseline,
+                  selected: _selected != null && _selected! < sorted.length ? _selected : null,
+                  isDark: widget.isDark,
+                  progress: Motion.curve.transform(_reveal.value),
+                ),
               ),
             ),
           ),
@@ -85,11 +111,15 @@ class _WeightChartPainter extends CustomPainter {
   final int? selected;
   final bool isDark;
 
+  /// 0 → 1 while the line draws in.
+  final double progress;
+
   _WeightChartPainter({
     required this.entries,
     required this.baseline,
     required this.selected,
     required this.isDark,
+    this.progress = 1,
   });
 
   static const _leftPad = 40.0;
@@ -112,6 +142,8 @@ class _WeightChartPainter extends CustomPainter {
     final mid = (hi + lo) / 2;
     lo = (mid - span * 0.6).floorToDouble();
     hi = (mid + span * 0.6).ceilToDouble();
+    // Four grid steps of whole kilograms, so every axis label has the same format.
+    hi = lo + ((hi - lo) / 4).ceilToDouble() * 4;
 
     final layout = _ChartLayout(plot, lo, hi, []);
     if (entries.isEmpty) return layout;
@@ -128,8 +160,10 @@ class _WeightChartPainter extends CustomPainter {
     return layout;
   }
 
-  static String _fmtDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /// "14 Sep", the same short form used across the app.
+  static String _fmtDate(DateTime d) => '${d.day} ${_months[d.month - 1]}';
 
   static String _fmtKg(double v) =>
       v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
@@ -183,6 +217,10 @@ class _WeightChartPainter extends CustomPainter {
           align: TextAlign.right);
     }
 
+    // Everything from here on is revealed left to right.
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(0, 0, l.plot.left + (l.plot.width + 12) * progress, size.height));
+
     // Area fill and line.
     if (l.points.length > 1) {
       final path = Path()..moveTo(l.points.first.dx, l.points.first.dy);
@@ -212,6 +250,15 @@ class _WeightChartPainter extends CustomPainter {
       );
     }
 
+    // A single entry has no trend yet: label it and say what makes the line appear.
+    if (l.points.length == 1 && selected == null) {
+      final p = l.points.first;
+      _text(canvas, '${_fmtKg(entries.first.weight)} kg', Offset(p.dx + 10, p.dy),
+          TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark)));
+      _text(canvas, 'Log another weight to see the trend', Offset(l.plot.center.dx, l.plot.top + l.plot.height / 8),
+          labelStyle, align: TextAlign.center);
+    }
+
     // Points.
     final surface = AppColors.surface(isDark);
     for (var i = 0; i < l.points.length; i++) {
@@ -219,6 +266,8 @@ class _WeightChartPainter extends CustomPainter {
       canvas.drawCircle(l.points[i], isSel ? 6 : 4, Paint()..color = brand);
       canvas.drawCircle(l.points[i], isSel ? 3 : 2, Paint()..color = surface);
     }
+
+    canvas.restore();
 
     // Tooltip for the selected point.
     if (selected != null) {
@@ -228,7 +277,7 @@ class _WeightChartPainter extends CustomPainter {
           Paint()..color = AppColors.textMuted(isDark).withValues(alpha: 0.4));
       final tp = TextPainter(
         text: TextSpan(
-          text: '${_fmtKg(e.weight)} kg  ·  ${_fmtDate(e.date)}/${e.date.year}',
+          text: '${_fmtKg(e.weight)} kg  ·  ${_fmtDate(e.date)} ${e.date.year}',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.bg(isDark)),
         ),
         textDirection: TextDirection.ltr,
@@ -244,5 +293,9 @@ class _WeightChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _WeightChartPainter old) =>
-      old.entries != entries || old.baseline != baseline || old.selected != selected || old.isDark != isDark;
+      old.entries != entries ||
+      old.baseline != baseline ||
+      old.selected != selected ||
+      old.isDark != isDark ||
+      old.progress != progress;
 }

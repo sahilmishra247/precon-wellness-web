@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../models/exercise.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
@@ -141,8 +141,8 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                 PaneToolbar(
                   title: viewerIsClient ? 'Your workout' : 'Workout plan',
                   subtitle: widget.readOnly && !viewerIsClient
-                      ? 'View only · ${exercises.length} exercises'
-                      : '${exercises.length} exercises',
+                      ? 'View only · ${exercises.length} ${exercises.length == 1 ? 'exercise' : 'exercises'}'
+                      : '${exercises.length} ${exercises.length == 1 ? 'exercise' : 'exercises'}',
                   actions: [
                     if (!widget.readOnly)
                       FilledButton.icon(
@@ -212,7 +212,6 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
               ),
             ),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
             ],
           ),
           floatingActionButton: widget.readOnly
@@ -256,7 +255,7 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                             itemCount: exercises.length,
                             separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                            itemBuilder: (context, index) {
+                            itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                               final exercise = exercises[index];
                               return Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -351,7 +350,7 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                                   ],
                                 ),
                               );
-                            },
+                            })),
                           ),
                   ),
                 ),

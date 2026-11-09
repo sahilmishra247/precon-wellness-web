@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../models/user_role.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import 'add_client_screen.dart';
 import 'archived_clients_screen.dart';
@@ -100,13 +101,12 @@ class _ClientsScreenState extends State<ClientsScreen> {
           appBar: AppBar(
             title: Text('Clients', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
               if (widget.role.canManageClients)
                 IconButton(
                   tooltip: 'Archived clients',
                   icon: Icon(Icons.archive_outlined, size: 20, color: AppColors.textSecondary(isDark)),
                   onPressed: () async {
-                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const ArchivedClientsScreen()));
+                    await Navigator.push(context, AppRoute(builder: (_) => const ArchivedClientsScreen()));
                     _loadClients();
                   },
                 ),
@@ -115,7 +115,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
           floatingActionButton: widget.role.canManageClients
               ? FloatingActionButton.extended(
                   onPressed: () async {
-                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddClientScreen()));
+                    await Navigator.push(context, AppRoute(builder: (_) => const AddClientScreen()));
                     _loadClients();
                   },
                   icon: const Icon(Icons.person_add_outlined, size: 18),
@@ -164,11 +164,11 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
                                 itemCount: clients.length,
                                 separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                                itemBuilder: (context, index) {
+                                itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                                   final client = clients[index];
                                   return InkWell(
                                     onTap: () async {
-                                      await Navigator.push(context, MaterialPageRoute(
+                                      await Navigator.push(context, AppRoute(
                                           builder: (_) => ClientDetailsScreen(client: client, role: widget.role)));
                                       _loadClients();
                                     },
@@ -177,14 +177,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                       padding: const EdgeInsets.symmetric(vertical: 12),
                                       child: Row(
                                         children: [
-                                          CircleAvatar(
-                                            radius: 20,
-                                            backgroundColor: AppColors.brandMuted(isDark),
-                                            child: Text(
-                                              client.fullName.isNotEmpty ? client.fullName[0].toUpperCase() : 'C',
-                                              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.brand(isDark)),
-                                            ),
-                                          ),
+                                          PersonAvatar(client.fullName, radius: 20),
                                           const SizedBox(width: 14),
                                           Expanded(
                                             child: Column(
@@ -221,7 +214,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                       ),
                                     ),
                                   );
-                                },
+                                })),
                               ),
                   ),
                 ],

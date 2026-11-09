@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
@@ -124,20 +126,13 @@ class _ArchivedClientsScreenState extends State<ArchivedClientsScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                           itemCount: archivedClients.length,
                           separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                          itemBuilder: (context, index) {
+                          itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                             final client = archivedClients[index];
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: AppColors.border(isDark),
-                                    child: Text(
-                                      client.fullName.isNotEmpty ? client.fullName[0].toUpperCase() : 'C',
-                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textSecondary(isDark)),
-                                    ),
-                                  ),
+                                  PersonAvatar(client.fullName, radius: 20),
                                   const SizedBox(width: 14),
                                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(client.fullName, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.textPrimary(isDark))),
@@ -158,7 +153,7 @@ class _ArchivedClientsScreenState extends State<ArchivedClientsScreen> {
                                 ],
                               ),
                             );
-                          },
+                          })),
                         ),
             ),
           ),

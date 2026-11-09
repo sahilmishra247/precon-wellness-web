@@ -26,7 +26,7 @@ class SimpleMarkdown extends StatelessWidget {
         children.add(Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Text(line.substring(2),
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark))),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
         ));
       } else {
         final bullet = RegExp(r'^\s*(\*|-|\d+\.)\s+(.*)$').firstMatch(line);

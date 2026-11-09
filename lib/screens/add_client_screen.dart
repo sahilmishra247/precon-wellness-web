@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
@@ -95,7 +94,6 @@ class _AddClientScreenState extends State<AddClientScreen> {
               ? sideSheetAppBar(context, 'Add client')
               : AppBar(
                   title: Text('Add client', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
-                  actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
                 ),
           body: Center(
             child: ConstrainedBox(
@@ -108,7 +106,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Client details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+                        Text('Client details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark), letterSpacing: 0)),
                         const SizedBox(height: 4),
                         Text('Fill in all required fields to register a new client.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
                       ]),

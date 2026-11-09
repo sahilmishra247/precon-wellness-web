@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../services/session_manager.dart';
 import '../screens/login_screen.dart';
 import '../theme/app_colors.dart';
-import 'theme_toggle_button.dart';
 
 /// One entry in the desktop icon rail.
 class RailDestination {
@@ -30,7 +30,7 @@ class IconRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 68,
+      width: 76,
       color: AppColors.rail(isDark),
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
@@ -55,7 +55,6 @@ class IconRail extends StatelessWidget {
               child: _railButton(destinations[i], i == selectedIndex, () => onSelected(i)),
             ),
           const Spacer(),
-          const ThemeToggleButton(color: AppColors.railInk),
           IconButton(
             tooltip: 'Log out',
             icon: const Icon(Icons.logout_rounded, color: AppColors.railInk, size: 20),
@@ -75,16 +74,29 @@ class IconRail extends StatelessWidget {
         button: true,
         selected: selected,
         label: d.label,
-        child: Material(
-          color: selected ? AppColors.railActive : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-          child: InkWell(
-            onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          curve: Motion.curve,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.railActive : Colors.transparent,
             borderRadius: BorderRadius.circular(AppColors.radiusMedium),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: Icon(d.icon, size: 21, color: selected ? Colors.white : AppColors.railInk),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppColors.radiusMedium),
+              hoverColor: Colors.white.withValues(alpha: 0.08),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: AnimatedScale(
+                  duration: Motion.fast,
+                  curve: Motion.curve,
+                  scale: selected ? 1.08 : 1,
+                  child: Icon(d.icon, size: 22, color: selected ? Colors.white : AppColors.railInk),
+                ),
+              ),
             ),
           ),
         ),
@@ -114,7 +126,7 @@ Future<void> confirmAndLogout(BuildContext context) async {
     await SessionManager.clear();
     if (!context.mounted) return;
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      AppRoute(builder: (_) => const LoginScreen()),
       (_) => false,
     );
   }
@@ -132,7 +144,7 @@ class PaneNavigator extends StatelessWidget {
     return DesktopPaneScope(
       child: ClipRect(
         child: Navigator(
-          onGenerateInitialRoutes: (_, _) => [MaterialPageRoute(builder: (_) => child)],
+          onGenerateInitialRoutes: (_, _) => [AppRoute(builder: (_) => child)],
         ),
       ),
     );
@@ -168,7 +180,7 @@ class PaneToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 24, 32, 16),
+      padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
       child: Row(
         children: [
           Expanded(
@@ -176,10 +188,10 @@ class PaneToolbar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary(isDark))),
                 if (subtitle != null) ...[
                   const SizedBox(height: 2),
-                  Text(subtitle!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
+                  Text(subtitle!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary(isDark))),
                 ],
               ],
             ),
@@ -223,7 +235,8 @@ class PaneTable extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface(isDark),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(isDark)),
+        border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

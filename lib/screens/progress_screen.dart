@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../models/progress_entry.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../widgets/weight_chart.dart';
@@ -163,7 +163,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
             decoration: BoxDecoration(
               color: AppColors.surface(isDark),
               borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-              border: Border.all(color: AppColors.border(isDark)),
+              border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,9 +172,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 Text(label,
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark), fontWeight: FontWeight.w500)),
                 const SizedBox(height: 6),
-                Text(value,
+                CountUpText(value,
                     style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+                        fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark), letterSpacing: 0)),
                 if (sub != null) ...[
                   const SizedBox(height: 2),
                   Text(sub,
@@ -186,15 +187,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
         );
 
     final d = entries.first.date;
-    return Row(
-      children: [
-        tile('Starting', '${_fmtKg(start)} kg', null),
-        const SizedBox(width: 10),
-        tile('Current', '${_fmtKg(current)} kg',
-            '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}'),
-        const SizedBox(width: 10),
-        tile('Change', changeText, '${entries.length} ${entries.length == 1 ? 'entry' : 'entries'}'),
-      ],
+    // IntrinsicHeight keeps the three tiles the same height on narrow phones.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          tile('Starting', '${_fmtKg(start)} kg', 'From profile'),
+          const SizedBox(width: 10),
+          tile('Current', '${_fmtKg(current)} kg', fmtDay(d)),
+          const SizedBox(width: 10),
+          tile('Change', changeText, '${entries.length} ${entries.length == 1 ? 'entry' : 'entries'}'),
+        ],
+      ),
     );
   }
 
@@ -210,14 +214,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
             decoration: BoxDecoration(
               color: AppColors.surface(isDark),
               borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-              border: Border.all(color: AppColors.border(isDark)),
+              border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary(isDark))),
                 const SizedBox(height: 4),
-                Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
+                CountUpText(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark))),
                 if (note != null)
                   Text(note, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark))),
               ],
@@ -234,7 +239,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               children: [
                 PaneToolbar(
                   title: viewerIsClient ? 'Your progress' : 'Progress',
-                  subtitle: widget.readOnly && !viewerIsClient ? 'View only · ${entries.length} entries' : '${entries.length} entries',
+                  subtitle: '${widget.readOnly && !viewerIsClient ? 'View only · ' : ''}${entries.length} ${entries.length == 1 ? 'entry' : 'entries'}',
                   actions: [
                     if (!widget.readOnly) ...[
                       SizedBox(
@@ -278,7 +283,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               decoration: BoxDecoration(
                                 color: AppColors.surface(isDark),
                                 borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                                border: Border.all(color: AppColors.border(isDark)),
+                                border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +357,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
               ),
             ),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
             ],
           ),
           body: Center(
@@ -367,7 +372,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surface(isDark),
                           borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                          border: Border.all(color: AppColors.border(isDark)),
+                          border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
                         ),
                         child: LayoutBuilder(
                           builder: (context, constraints) {
@@ -458,7 +464,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surface(isDark),
                           borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                          border: Border.all(color: AppColors.border(isDark)),
+                          border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -557,7 +564,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
-                                                  'Logged on ${entry.date.day.toString().padLeft(2, '0')}/${entry.date.month.toString().padLeft(2, '0')}/${entry.date.year}',
+                                                  'Logged on ${fmtDate(entry.date)}',
                                                   style: TextStyle(
                                                     fontSize: 12,
                                                     color: AppColors.textSecondary(isDark),

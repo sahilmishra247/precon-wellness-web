@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../widgets/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
@@ -13,7 +14,6 @@ import '../models/client.dart';
 import '../models/user_role.dart';
 import '../services/session_manager.dart';
 import '../services/api_config.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/confirm_exit_scope.dart';
 import '../widgets/auth_split_layout.dart';
 import '../layout/desktop.dart';
@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           Navigator.push(
             context,
-            MaterialPageRoute(
+            AppRoute(
               builder: (_) => EmailVerificationScreen(
                 email: response['email'] ?? emailController.text.trim(),
               ),
@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => ClientDashboardScreen(client: client)),
+          AppRoute(builder: (_) => ClientDashboardScreen(client: client)),
         );
       } else {
         await SessionManager.setUser(
@@ -161,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => DashboardScreen(role: role)),
+          AppRoute(builder: (_) => DashboardScreen(role: role)),
         );
       }
     } catch (error) {
@@ -176,14 +176,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showSnack(String message, {bool isError = false, bool isWarning = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color bg;
     if (isError) {
       bg = AppColors.error;
     } else if (isWarning) {
       bg = AppColors.warning;
     } else {
-      bg = isDark ? AppColors.darkSurfaceElevated : AppColors.lightTextPrimary;
+      bg = AppColors.navy;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -257,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       _showSnack('If an account exists for that email, a reset code has been sent.');
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        AppRoute(
                           builder: (_) => ResetPasswordScreen(email: email),
                         ),
                       );
@@ -526,9 +525,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    ThemeToggleButton(
-                      color: AppColors.textSecondary(isDark),
-                    ),
                     const SizedBox(width: 4),
                     IconButton(
                       icon: Icon(
@@ -554,7 +550,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Welcome back',
                           style: TextStyle(
                             fontSize: 28,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary(isDark),
                             letterSpacing: -0.5,
                           ),
@@ -587,9 +583,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Precon Wellness',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary(isDark),
-                      letterSpacing: -0.5,
+                      letterSpacing: 0,
                     ),
                   ),
                   const SizedBox(height: AppColors.space4),
@@ -706,7 +702,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           GestureDetector(
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              AppRoute(
                                   builder: (_) => const SignupScreen()),
                             ),
                             child: Text(

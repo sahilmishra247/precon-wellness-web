@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'ui.dart';
+import '../widgets/motion.dart';
 import '../layout/desktop.dart';
 import '../theme/app_colors.dart';
 
@@ -10,13 +12,13 @@ class AuthSplitLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isDesktopLayout(context)) return child;
+    if (!isDesktopLayout(context)) return FadeSlideIn(child: child);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: _BrandPanel(isDark: isDark)),
-        Expanded(child: child),
+        Expanded(child: FadeSlideIn(index: 3, offset: 12, child: child)),
       ],
     );
   }
@@ -30,7 +32,10 @@ class _BrandPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.rail(isDark),
-      child: Padding(
+      child: Stack(children: [
+        const Positioned(right: -90, top: -60, child: DecorRing(size: 360)),
+        const Positioned(left: -70, bottom: -110, child: DecorRing(size: 280)),
+        Padding(
         padding: const EdgeInsets.fromLTRB(64, 56, 64, 48),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +58,7 @@ class _BrandPanel extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Text(
                   'Precon Wellness',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: -0.3),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0),
                 ),
               ],
             ),
@@ -66,9 +71,9 @@ class _BrandPanel extends StatelessWidget {
                   Text(
                     'Your care team, your plan, one place.',
                     style: TextStyle(
-                      fontSize: 40,
-                      height: 1.15,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 44,
+                      height: 1.12,
+                      fontWeight: FontWeight.w800,
                       color: Colors.white,
                       letterSpacing: -0.8,
                     ),
@@ -89,6 +94,7 @@ class _BrandPanel extends StatelessWidget {
           ],
         ),
       ),
+      ]),
     );
   }
 }

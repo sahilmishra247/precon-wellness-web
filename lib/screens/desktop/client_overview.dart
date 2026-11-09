@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/ui.dart';
+import '../../widgets/motion.dart';
 import '../../models/appointment.dart';
 import '../../models/client.dart';
 import '../../models/exercise.dart';
 import '../../models/food_item.dart';
+import '../../models/meal_slot.dart';
 import '../../models/note.dart';
 import '../../models/progress_entry.dart';
 import '../../services/appointment_service.dart';
@@ -50,8 +53,8 @@ class _ClientOverviewState extends State<ClientOverview> {
   List<Note> _notes = [];
   List<FoodItem> _food = [];
   List<Exercise> _exercises = [];
+  List<MealSlot> _slots = [];
 
-  static const _mealOrder = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
   static const _dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -72,6 +75,7 @@ class _ClientOverviewState extends State<ClientOverview> {
       _safe(_wellness.getNotes(email)),
       _safe(_wellness.getDietItems(email)),
       _safe(_wellness.getExercises(email)),
+      _safe(_wellness.getMealSlots(email)),
     ]);
     if (!mounted) return;
     final now = DateTime.now();
@@ -82,6 +86,7 @@ class _ClientOverviewState extends State<ClientOverview> {
       _notes = (results[2] as List<Note>)..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       _food = results[3] as List<FoodItem>;
       _exercises = results[4] as List<Exercise>;
+      _slots = (results[5] as List<MealSlot>)..sort(MealSlot.byTime);
       _isLoading = false;
     });
   }
@@ -120,7 +125,7 @@ class _ClientOverviewState extends State<ClientOverview> {
                           Expanded(child: _stack(main)),
                           const SizedBox(width: 20),
                           // Line the side cards up with the first card under the greeting.
-                          SizedBox(width: 340, child: Padding(padding: const EdgeInsets.only(top: 76), child: _stack(side))),
+                          SizedBox(width: 340, child: Padding(padding: const EdgeInsets.only(top: 128), child: _stack(side))),
                         ]
                       : [
                           SizedBox(width: 340, child: _stack(side)),
@@ -139,68 +144,71 @@ class _ClientOverviewState extends State<ClientOverview> {
         children: [
           for (var i = 0; i < children.length; i++) ...[
             if (i > 0) const SizedBox(height: 14),
-            children[i],
+            FadeSlideIn(index: i, child: HoverLift(child: children[i])),
           ],
         ],
       );
 
   // ── Left column ──────────────────────────────────────────────────────────
 
-  String _salutation(DateTime now) =>
-      now.hour < 12 ? 'Good morning' : (now.hour < 17 ? 'Good afternoon' : 'Good evening');
-
   Widget _greeting() {
     final now = DateTime.now();
     final firstName = widget.client.fullName.split(' ').first;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('${_salutation(now)}, $firstName',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: AppColors.textPrimary(_dark))),
-        const SizedBox(height: 4),
-        Text(
-          "${_fmtDay(now)} · here's your plan for today",
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary(_dark)),
-        ),
-      ]),
+    return HeroBanner(
+      title: _fmtDay(now),
+      subtitle: widget.client.goal.isNotEmpty
+          ? "$firstName's plan for today · Goal: ${widget.client.goal}"
+          : "$firstName's plan for today",
     );
   }
 
   Widget _nextSession() {
     final next = _upcoming.isNotEmpty ? _upcoming.first : null;
+    if (next == null) {
+      return _card(
+        title: 'Next session',
+        icon: Icons.calendar_month_outlined,
+        child: _empty('No upcoming sessions booked'),
+      );
+    }
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.accentMuted(_dark),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.accent, Color(0xFFF08A5D)],
+        ),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 10))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label('Next session', color: AppColors.accentInk(_dark)),
-        const SizedBox(height: 6),
-        if (next == null)
-          Text('No upcoming sessions booked.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary(_dark)))
-        else ...[
-          Text('${_fmtDay(next.appointmentDate)}, ${_fmtTime(next.appointmentDate)}',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary(_dark))),
-          if (next.notes.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(next.notes, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary(_dark))),
-          ],
-          if (next.meetingLink.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.accentColor(_dark)),
-              onPressed: () => UrlHelper.openUrl(context, next.meetingLink),
-              icon: const Icon(Icons.video_call_rounded, size: 18),
-              label: const Text('Join call'),
-            ),
-          ],
-          if (_upcoming.length > 1) ...[
-            const SizedBox(height: 10),
-            Text('${_upcoming.length - 1} more booked after this',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary(_dark))),
-          ],
+        Row(children: [
+          const Icon(Icons.event_available_rounded, size: 18, color: Colors.white),
+          const SizedBox(width: 8),
+          Text('Next session', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9))),
+        ]),
+        const SizedBox(height: 10),
+        Text('${_fmtDay(next.appointmentDate)}, ${_fmtTime(next.appointmentDate)}',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
+        if (next.notes.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(next.notes, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.9))),
+        ],
+        if (next.meetingLink.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.accentInk()),
+            onPressed: () => UrlHelper.openUrl(context, next.meetingLink),
+            icon: const Icon(Icons.video_call_rounded, size: 18),
+            label: const Text('Join call'),
+          ),
+        ],
+        if (_upcoming.length > 1) ...[
+          const SizedBox(height: 10),
+          Text('${_upcoming.length - 1} more booked after this',
+              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85))),
         ],
       ]),
     );
@@ -214,17 +222,18 @@ class _ClientOverviewState extends State<ClientOverview> {
     }).toList();
 
     final rows = <Widget>[];
-    for (final meal in _mealOrder) {
-      final mealItems = items.where((f) => (f.mealType ?? '').toLowerCase() == meal.toLowerCase()).toList();
+    for (final slot in _slots) {
+      final mealItems = items.where((f) => (f.mealType ?? '').toLowerCase() == slot.key).toList();
       if (mealItems.isEmpty) continue;
       rows.add(_listRow(
-        meal,
+        slot.label,
         mealItems.map((f) => '${f.name} (${_fmtAmount(f.amount)} ${f.unit})').join(', '),
       ));
     }
 
     return _card(
       title: "Today's meals",
+      icon: Icons.restaurant_outlined,
       child: rows.isEmpty
           ? _empty('No diet plan for today yet.')
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
@@ -234,7 +243,8 @@ class _ClientOverviewState extends State<ClientOverview> {
   Widget _workout() {
     return _card(
       title: 'Workout plan',
-      trailing: _exercises.isEmpty ? null : _muted('${_exercises.length} exercises'),
+      icon: Icons.fitness_center_outlined,
+      trailing: _exercises.isEmpty ? null : _muted('${_exercises.length} ${_exercises.length == 1 ? 'exercise' : 'exercises'}'),
       child: _exercises.isEmpty
           ? _empty('No workout plan yet.')
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -257,21 +267,22 @@ class _ClientOverviewState extends State<ClientOverview> {
 
     return Row(children: [
       Expanded(child: _metric('Current weight', _fmtKg(current),
-          _entries.isNotEmpty ? 'Logged ${_fmtDay(_entries.last.date)}' : 'From profile')),
+          _entries.isNotEmpty ? 'Logged ${_fmtDay(_entries.last.date)}' : 'From profile', area: AppColors.progress)),
       const SizedBox(width: 12),
       Expanded(child: _metric('Since start', '${change > 0 ? '+' : change < 0 ? '−' : ''}${_fmtKg(change.abs())}',
-          'Started at ${_fmtKg(start)}', valueColor: changeColor)),
+          'Started at ${_fmtKg(start)}', valueColor: changeColor, area: change > 0 ? AppColors.diet : AppColors.progress)),
       const SizedBox(width: 12),
-      Expanded(child: _metric('BMI', bmi > 0 ? bmi.toStringAsFixed(1) : '—', '${widget.client.height.toInt()} cm')),
+      Expanded(child: _metric('BMI', bmi > 0 ? bmi.toStringAsFixed(1) : '—', '${widget.client.height.toInt()} cm', area: AppColors.workout)),
       const SizedBox(width: 12),
       Expanded(child: _metric('Age', '${widget.client.age} yrs',
-          widget.client.gender.isNotEmpty ? widget.client.gender : '—')),
+          widget.client.gender.isNotEmpty ? widget.client.gender : '—', area: AppColors.notes)),
     ]);
   }
 
   Widget _chart() {
     return _card(
       title: 'Weight history',
+      icon: Icons.show_chart_rounded,
       trailing: widget.onOpenProgress == null
           ? null
           : TextButton.icon(
@@ -289,6 +300,7 @@ class _ClientOverviewState extends State<ClientOverview> {
     final note = _notes.isNotEmpty ? _notes.first : null;
     return _card(
       title: widget.clientHome ? 'From your care team' : 'Latest consultation note',
+      icon: Icons.note_alt_outlined,
       trailing: note == null ? null : _muted(_fmtDay(note.createdAt)),
       child: note == null
           ? _empty('No notes yet.')
@@ -307,6 +319,7 @@ class _ClientOverviewState extends State<ClientOverview> {
   Widget _progressPrompt() {
     return _card(
       title: 'Progress',
+      icon: Icons.monitor_weight_outlined,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Weigh in once a week, at the same time of day.',
             style: TextStyle(fontSize: 13, color: AppColors.textPrimary(_dark))),
@@ -324,42 +337,38 @@ class _ClientOverviewState extends State<ClientOverview> {
 
   // ── Building blocks ──────────────────────────────────────────────────────
 
-  Widget _card({required String title, required Widget child, Widget? trailing}) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface(_dark),
-        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(_dark)),
-      ),
+  Widget _card({required String title, required Widget child, Widget? trailing, IconData? icon}) {
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
-          height: 32,
+          height: 36,
           child: Row(children: [
+            if (icon != null) ...[IconChip(icon, size: 34), const SizedBox(width: 12)],
             Expanded(child: Text(title,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(_dark)))),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary(_dark)))),
             ?trailing,
           ]),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
         child,
       ]),
     );
   }
 
-  Widget _metric(String label, String value, String sub, {Color? valueColor}) {
+  Widget _metric(String label, String value, String sub, {Color? valueColor, AreaColor area = AppColors.neutral}) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.surface(_dark),
+        color: area.tint,
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(_dark)),
+        border: Border.all(color: area.color.withValues(alpha: 0.18)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _label(label),
-        const SizedBox(height: 6),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.3,
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: area.ink)),
+        const SizedBox(height: 8),
+        CountUpText(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 0,
                 color: valueColor ?? AppColors.textPrimary(_dark))),
         const SizedBox(height: 2),
         Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -374,19 +383,19 @@ class _ClientOverviewState extends State<ClientOverview> {
       decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border(_dark).withValues(alpha: 0.6)))),
       child: valueRight
           ? Row(children: [
-              Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: AppColors.textPrimary(_dark)))),
+              Expanded(child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(_dark)))),
               _muted(value),
             ])
           : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _label(label),
               const SizedBox(height: 2),
-              Text(value, style: TextStyle(fontSize: 13, color: AppColors.textPrimary(_dark))),
+              Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary(_dark))),
             ]),
     );
   }
 
-  Widget _label(String s, {Color? color}) => Text(s.toUpperCase(),
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.6, color: color ?? AppColors.textMuted(_dark)));
+  Widget _label(String s, {Color? color}) => Text(s,
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: color ?? AppColors.textSecondary(_dark)));
 
   Widget _muted(String s) => Text(s, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(_dark)));
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/client.dart';
 import '../services/client_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 
@@ -99,7 +98,6 @@ class _EditClientScreenState extends State<EditClientScreen> {
               ? sideSheetAppBar(context, viewerIsClient ? 'Edit profile' : 'Edit client')
               : AppBar(
                   title: Text('Edit client', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
-                  actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
                 ),
           body: Center(
             child: ConstrainedBox(
@@ -111,7 +109,7 @@ class _EditClientScreenState extends State<EditClientScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
-                      child: Text('Profile details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+                      child: Text('Profile details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark), letterSpacing: 0)),
                     ),
 
                     _labeled('Full name', nameController, isDark),
