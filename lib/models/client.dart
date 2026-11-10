@@ -3,6 +3,7 @@ import 'progress_entry.dart';
 import 'exercise.dart';
 import 'food_item.dart';
 import 'appointment.dart';
+import 'health_tag.dart';
 
 
 class Client {
@@ -16,6 +17,7 @@ class Client {
   String phoneNumber;
   String email;
   bool isArchived;
+  DateTime? healthConsentAt;
 
   List<Note> notes = [];
   List<ProgressEntry> progressEntries = [];
@@ -25,6 +27,7 @@ class Client {
   List<FoodItem> dinnerItems = [];
   List<FoodItem> snacksItems = [];
   List<Appointment> appointments = [];
+  List<HealthTag> healthTags = [];
 
   Client({
     this.id,
@@ -37,6 +40,7 @@ class Client {
     required this.phoneNumber,
     required this.email,
     this.isArchived = false,
+    this.healthConsentAt,
   });
 
   factory Client.fromJson(Map<String, dynamic> json) {
@@ -51,6 +55,7 @@ class Client {
       phoneNumber: json['phone_number'] ?? '',
       email: json['email'] ?? '',
       isArchived: json['is_archived'] ?? false,
+      healthConsentAt: DateTime.tryParse(json['health_consent_at'] ?? ''),
     );
   }
 
@@ -66,6 +71,7 @@ class Client {
       'phone_number': phoneNumber,
       'email': email,
       'is_archived': isArchived,
+      if (healthConsentAt != null) 'health_consent_at': healthConsentAt!.toIso8601String(),
     };
   }
 }

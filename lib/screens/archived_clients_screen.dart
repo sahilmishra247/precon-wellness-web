@@ -6,6 +6,7 @@ import '../services/client_service.dart';
 import '../services/theme_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/desktop_shell.dart';
+import '../utils/error_messages.dart';
 
 class ArchivedClientsScreen extends StatefulWidget {
   const ArchivedClientsScreen({super.key});
@@ -32,7 +33,7 @@ class _ArchivedClientsScreenState extends State<ArchivedClientsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load archived clients: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load archived clients: ${describeError(e)}')));
       }
     }
   }
@@ -47,7 +48,7 @@ class _ArchivedClientsScreenState extends State<ArchivedClientsScreen> {
       await _loadArchivedClients();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${client.fullName} restored')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(e))));
     }
   }
 

@@ -3,6 +3,7 @@ import '../services/client_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
 
 class AddClientScreen extends StatefulWidget {
   const AddClientScreen({super.key});
@@ -76,7 +77,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       if (!mounted) return;
       setState(() => isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error creating client: $e'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Error creating client: ${describeError(e)}'), backgroundColor: AppColors.error),
       );
     }
   }

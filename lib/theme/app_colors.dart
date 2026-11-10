@@ -114,6 +114,12 @@ abstract class AppColors {
     BoxShadow(color: Color(0x0A07294D), blurRadius: 3, offset: Offset(0, 1)),
   ];
 
+  // Health tags: "Take care" level (amber). "Must avoid" reuses coral.
+  static const Color cautionInkLight = Color(0xFFB45309);
+  static const Color cautionInkDark = Color(0xFFF0A54A);
+  static const Color cautionTintLight = Color(0xFFFEF3E2);
+  static const Color cautionTintDark = Color(0x21F0A54A);
+
   // ---------------------------------------------------------------------------
   // Spacing scale
   // ---------------------------------------------------------------------------
@@ -152,4 +158,7 @@ abstract class AppColors {
   static Color accentMuted([bool _ = false]) => accentTint;
   static Color accentInk([bool _ = false]) => accentInkLight;
   static Color brandMuted([bool _ = false]) => primaryMuted;
+  static Color cautionInk([bool _ = false]) => cautionInkLight;
+  static Color cautionMuted([bool _ = false]) => cautionTintLight;
+  static Color neutralMuted([bool _ = false]) => lightBorderSubtle;
 }

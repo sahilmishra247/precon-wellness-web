@@ -9,6 +9,8 @@ import '../widgets/desktop_shell.dart';
 import '../widgets/motion.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
+import '../utils/error_messages.dart';
+import '../widgets/health_tags.dart';
 
 /// Weekly diet plan: one row per meal ("Meal 1 · 7:00 am"), days across.
 /// Staff can rename a row, change its time, add rows and delete them.
@@ -65,7 +67,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
-      _snack('Could not load the diet plan: $e', error: true);
+      _snack('Could not load the diet plan: ${describeError(e)}', error: true);
     }
   }
 
@@ -95,7 +97,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       await wellnessService.createMealSlot(clientEmail: widget.client.email, title: result.title, time: result.time);
       await _load();
     } catch (e) {
-      _snack('Could not add the meal row: $e', error: true);
+      _snack('Could not add the meal row: ${describeError(e)}', error: true);
     }
   }
 
@@ -113,7 +115,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       }
       await _load();
     } catch (e) {
-      _snack('Could not save the meal row: $e', error: true);
+      _snack('Could not save the meal row: ${describeError(e)}', error: true);
     }
   }
 
@@ -151,7 +153,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       }
       await _load();
     } catch (e) {
-      _snack('Error saving food item: $e', error: true);
+      _snack('Error saving food item: ${describeError(e)}', error: true);
     }
   }
 
@@ -176,7 +178,7 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
       await wellnessService.deleteDietItem(item.id!);
       await _load();
     } catch (e) {
-      _snack('Error deleting food item: $e', error: true);
+      _snack('Error deleting food item: ${describeError(e)}', error: true);
     }
   }
 
@@ -210,6 +212,8 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
     );
   }
 
+  String get _healthStripTitle => 'Keep in mind for ${widget.client.fullName.split(' ').first}\'s diet';
+
   Widget _content(bool isDark, bool desktop) {
     final count = allItems.length;
     final subtitle = viewerIsClient
@@ -238,6 +242,13 @@ class _DietPlanScreenState extends State<DietPlanScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: Text(subtitle, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
+          ),
+        // Allergies and conditions staff should keep in mind while planning.
+        if (!viewerIsClient)
+          HealthReminderStrip(
+            client: widget.client,
+            title: _healthStripTitle,
+            margin: EdgeInsets.fromLTRB(desktop ? 28 : 12, 0, desktop ? 28 : 12, 14),
           ),
         Expanded(
           child: slots.isEmpty
