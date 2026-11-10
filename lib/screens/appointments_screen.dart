@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../models/appointment.dart';
 import '../models/client.dart';
 import '../services/appointment_service.dart';
 import '../services/client_service.dart';
 import '../services/session_manager.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../utils/url_helper.dart';
@@ -130,11 +130,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
-  String _formatDateTime(DateTime value) {
-    final minute = value.minute.toString().padLeft(2, '0');
-    final hour = value.hour.toString().padLeft(2, '0');
-    return '${value.day}/${value.month}/${value.year} $hour:$minute';
-  }
+  String _formatDateTime(DateTime value) => '${fmtDate(value)}, ${fmtTime(value)}';
 
   // Upcoming and past sessions as two tables; Schedule sits in the toolbar.
   Widget _buildDesktop(bool isDark) {
@@ -245,7 +241,6 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           appBar: AppBar(
             title: Text(widget.client == null ? 'Appointments' : 'My appointments',
                 style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
-            actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
           ),
           floatingActionButton: widget.readOnly ? null : FloatingActionButton.extended(
             onPressed: () => _showAppointmentDialog(),
@@ -273,7 +268,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                           itemCount: appointments.length,
                           separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                          itemBuilder: (context, index) {
+                          itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                             final apt = appointments[index];
                             final clientName = _getClientDisplayName(apt.clientName);
                             return Padding(
@@ -346,7 +341,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                                 ],
                               ),
                             );
-                          },
+                          })),
                         ),
             ),
           ),
@@ -447,7 +442,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.date_range_outlined),
             title: const Text('Date'),
-            subtitle: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+            subtitle: Text(fmtDate(selectedDate),
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             trailing: const Text('Change'),
             onTap: _selectDate,

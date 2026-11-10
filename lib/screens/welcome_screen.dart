@@ -10,7 +10,7 @@ class WelcomeScreen extends StatelessWidget {
       body: const Center(
         child: Text(
           'Welcome to Precon Wellness',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
         ),
       ),
     );

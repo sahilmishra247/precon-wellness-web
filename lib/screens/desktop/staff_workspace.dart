@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/ui.dart';
+import '../../widgets/motion.dart';
 import '../../models/client.dart';
 import '../../models/health_tag.dart';
 import '../../models/user_role.dart';
@@ -40,7 +42,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
   // Kept across rebuilds of the workspace (e.g. resizing the window).
   static bool _listHidden = false;
 
-  static const double _listWidth = 320;
+  double get _listWidth => MediaQuery.sizeOf(context).width < 1200 ? 272 : 320;
 
   final ClientService _clientService = ClientService();
   final HealthService _healthService = HealthService();
@@ -195,7 +197,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
                     for (final s in sections) _destination(s),
                   ],
                 ),
-                Expanded(child: _content(isDark)),
+                Expanded(child: FadeSwitch(child: _content(isDark))),
               ],
             ),
           ),
@@ -222,7 +224,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
   Widget _content(bool isDark) {
     switch (_section) {
       case _Section.clients:
-        return _clientsView(isDark);
+        return KeyedSubtree(key: const ValueKey('clients'), child: _clientsView(isDark));
       case _Section.appointments:
         return const PaneNavigator(key: ValueKey('appointments'), child: AppointmentsScreen());
       case _Section.library:
@@ -271,7 +273,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
           padding: const EdgeInsets.fromLTRB(16, 16, 8, 10),
           child: Row(children: [
             Text(widget.role.isAdmin ? 'Clients' : 'Assigned clients',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark))),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary(isDark))),
             const SizedBox(width: 8),
             if (!_isLoading)
               Text('${_clients.length}', style: TextStyle(fontSize: 13, color: AppColors.textMuted(isDark))),
@@ -327,7 +329,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
                     )
                   : ListView.builder(
                       itemCount: clients.length,
-                      itemBuilder: (context, i) => _clientRow(clients[i], isDark),
+                      itemBuilder: (context, i) => FadeSlideIn(index: i, child: _clientRow(clients[i], isDark)),
                     ),
         ),
       ],
@@ -337,12 +339,15 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
   Widget _clientRow(Client client, bool isDark) {
     final selected = _selected?.id == client.id;
     return Material(
-      color: selected ? AppColors.brandMuted(isDark) : Colors.transparent,
+      color: Colors.transparent,
       child: InkWell(
         onTap: () => setState(() => _selected = client),
-        child: Container(
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          curve: Motion.curve,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           decoration: BoxDecoration(
+            color: selected ? AppColors.brandMuted(isDark) : Colors.transparent,
             border: Border(
               left: BorderSide(color: selected ? AppColors.brand(isDark) : Colors.transparent, width: 3),
               bottom: BorderSide(color: AppColors.border(isDark).withValues(alpha: 0.5)),
@@ -370,20 +375,8 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
     );
   }
 
-  Widget _avatar(Client client, bool isDark, double radius) => CircleAvatar(
-        radius: radius,
-        backgroundColor: AppColors.brandMuted(isDark),
-        child: Text(
-          _initials(client.fullName),
-          style: TextStyle(fontSize: radius * 0.75, fontWeight: FontWeight.w700, color: AppColors.brand(isDark)),
-        ),
-      );
+  Widget _avatar(Client client, bool isDark, double radius) => PersonAvatar(client.fullName, radius: radius);
 
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return 'C';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-  }
 
   Widget _detailsPane(bool isDark) {
     final client = _selected;
@@ -408,8 +401,8 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          color: AppColors.surface(isDark),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          decoration: BoxDecoration(color: AppColors.surface(isDark), boxShadow: AppColors.cardShadow),
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               if (_listHidden) ...[
@@ -425,7 +418,7 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(client.fullName, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, letterSpacing: -0.3,
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 0,
                           color: AppColors.textPrimary(isDark))),
                   const SizedBox(height: 2),
                   Text(
@@ -461,12 +454,15 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
                 label: const Text('Edit profile'),
               ),
             ]),
-            const SizedBox(height: 12),
-            Row(children: [for (final t in tabs) _tabButton(t, t == tab, isDark)]),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [for (final t in tabs) _tabButton(t, t == tab, isDark)]),
+            ),
           ]),
         ),
         Divider(height: 1, color: AppColors.border(isDark)),
-        Expanded(child: _tabContent(client, tab, isDark)),
+        Expanded(child: FadeSwitch(child: _tabContent(client, tab, isDark))),
       ],
     );
   }
@@ -499,21 +495,48 @@ class _StaffWorkspaceState extends State<StaffWorkspace> {
     }
   }
 
+  static const Map<_ClientTab, IconData> _tabIcons = {
+    _ClientTab.overview: Icons.people_outline_rounded,
+    _ClientTab.notes: Icons.note_alt_outlined,
+    _ClientTab.diet: Icons.restaurant_outlined,
+    _ClientTab.workout: Icons.fitness_center_outlined,
+    _ClientTab.progress: Icons.show_chart_rounded,
+    _ClientTab.sessions: Icons.calendar_month_outlined,
+  };
+
   Widget _tabButton(_ClientTab t, bool selected, bool isDark) {
-    return InkWell(
-      onTap: () => setState(() => _tab = t),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
-        margin: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: selected ? AppColors.brand(isDark) : Colors.transparent, width: 2)),
-        ),
-        child: Text(
-          _tabLabel(t),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? AppColors.brand(isDark) : AppColors.textSecondary(isDark),
+    final icon = _tabIcons[t]!;
+    final area = AppColors.areaForIcon(icon);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _tab = t),
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: Motion.fast,
+            curve: Motion.curve,
+            padding: const EdgeInsets.fromLTRB(12, 8, 14, 8),
+            decoration: BoxDecoration(
+              color: selected ? area.tint : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: selected ? area.color.withValues(alpha: 0.35) : AppColors.lightBorder),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 16, color: selected ? area.ink : AppColors.textMuted(isDark)),
+              const SizedBox(width: 6),
+              AnimatedDefaultTextStyle(
+                duration: Motion.fast,
+                style: TextStyle(
+                  fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? area.ink : AppColors.textSecondary(isDark),
+                ),
+                child: Text(_tabLabel(t)),
+              ),
+            ]),
           ),
         ),
       ),

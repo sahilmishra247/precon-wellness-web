@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../models/user_role.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../widgets/health_tags.dart';
 import '../utils/formatters.dart';
@@ -42,7 +43,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     final updated = DesktopPaneScope.of(context)
         ? await showSideSheet<bool>(context, EditClientScreen(client: widget.client))
         : await Navigator.push<bool>(
-            context, MaterialPageRoute(builder: (_) => EditClientScreen(client: widget.client)),
+            context, AppRoute(builder: (_) => EditClientScreen(client: widget.client)),
           );
     if (updated == true && mounted) setState(() {});
   }
@@ -53,7 +54,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
     final card = BoxDecoration(
       color: AppColors.surface(isDark),
       borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-      border: Border.all(color: AppColors.border(isDark)),
+      border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
     );
     // Clients see their BMI without a category label (it can read as a judgement).
     final bmiNote = isClientView ? 'Body mass index' : bmiCategory;
@@ -93,14 +95,7 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                           Padding(
                             padding: const EdgeInsets.all(20),
                             child: Row(children: [
-                              CircleAvatar(
-                                radius: 28,
-                                backgroundColor: AppColors.brandMuted(isDark),
-                                child: Text(
-                                  c.fullName.isNotEmpty ? c.fullName[0].toUpperCase() : 'C',
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.brand(isDark)),
-                                ),
-                              ),
+                              PersonAvatar(c.fullName, radius: 28),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -173,7 +168,6 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
               style: TextStyle(color: AppColors.textPrimary(isDark), fontSize: 16, fontWeight: FontWeight.w600),
             ),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
               IconButton(
                 tooltip: 'Edit',
                 icon: Icon(Icons.edit_outlined, color: AppColors.textSecondary(isDark), size: 20),
@@ -192,21 +186,14 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: AppColors.brandMuted(isDark),
-                          child: Text(
-                            widget.client.fullName.isNotEmpty ? widget.client.fullName[0].toUpperCase() : 'C',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.brand(isDark)),
-                          ),
-                        ),
+                        PersonAvatar(widget.client.fullName, radius: 32),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(widget.client.fullName,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary(isDark), letterSpacing: 0)),
                               const SizedBox(height: 3),
                               Text(widget.client.email,
                                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary(isDark))),
@@ -233,9 +220,9 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                   _sectionLabel('Health & body metrics', isDark),
                   const SizedBox(height: 10),
                   Row(children: [
-                    Expanded(child: _metricTile('Initial weight', '${widget.client.weight} kg', 'Current in Progress tracking', AppColors.brand(isDark), isDark)),
+                    Expanded(child: _metricTile('Initial weight', '${widget.client.weight} kg', 'Latest in Progress', AppColors.brand(isDark), isDark)),
                     const SizedBox(width: 10),
-                    Expanded(child: _metricTile('Height', '${widget.client.height.toInt()} cm', 'Standing height', AppColors.info, isDark)),
+                    Expanded(child: _metricTile('Height', '${widget.client.height.toInt()} cm', 'Standing height', AppColors.textSecondary(isDark), isDark)),
                   ]),
                   const SizedBox(height: 10),
                   Row(children: [
@@ -256,7 +243,8 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.surface(isDark),
                       borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                      border: Border.all(color: AppColors.border(isDark)),
+                      border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
                     ),
                     child: Column(children: [
                       _infoRow(Icons.phone_outlined, 'Phone', widget.client.phoneNumber.isNotEmpty ? widget.client.phoneNumber : '—', isDark),
@@ -281,21 +269,21 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
                     const SizedBox(height: 24),
                     _sectionLabel('Client management', isDark),
                     const SizedBox(height: 10),
-                    _navRow(Icons.note_outlined, 'Consultation notes', isDark, () => Navigator.push(context, MaterialPageRoute(
+                    _navRow(Icons.note_outlined, 'Consultation notes', isDark, () => Navigator.push(context, AppRoute(
                         builder: (_) => ConsultationNotesScreen(client: widget.client, authorName: widget.role.label, readOnly: false)))),
                     if (widget.role.canViewDietPlans) ...[
                       _divider(isDark),
-                      _navRow(Icons.restaurant_outlined, 'Diet plan', isDark, () => Navigator.push(context, MaterialPageRoute(
+                      _navRow(Icons.restaurant_outlined, 'Diet plan', isDark, () => Navigator.push(context, AppRoute(
                           builder: (_) => DietPlanScreen(client: widget.client, readOnly: !widget.role.canEditDietPlans)))),
                     ],
                     if (widget.role.canViewWorkoutPlans) ...[
                       _divider(isDark),
-                      _navRow(Icons.fitness_center_outlined, 'Workout plan', isDark, () => Navigator.push(context, MaterialPageRoute(
+                      _navRow(Icons.fitness_center_outlined, 'Workout plan', isDark, () => Navigator.push(context, AppRoute(
                           builder: (_) => WorkoutPlanScreen(client: widget.client, readOnly: !widget.role.canEditWorkoutPlans)))),
                     ],
                     if (widget.role.canViewProgress) ...[
                       _divider(isDark),
-                      _navRow(Icons.show_chart_rounded, 'Progress tracking', isDark, () => Navigator.push(context, MaterialPageRoute(
+                      _navRow(Icons.show_chart_rounded, 'Progress tracking', isDark, () => Navigator.push(context, AppRoute(
                           builder: (_) => ProgressScreen(client: widget.client, readOnly: !widget.role.canEditProgress)))),
                     ],
                     Container(decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border(isDark))))),
@@ -316,22 +304,29 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
       );
 
   Widget _sectionLabel(String label, bool isDark) => Text(label,
-      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: AppColors.textSecondary(isDark)));
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.navy));
 
   Widget _metricTile(String label, String value, String subtitle, Color accent, bool isDark) {
+    final area = label.contains('weight')
+        ? AppColors.progress
+        : label == 'Height'
+            ? AppColors.workout
+            : label == 'BMI'
+                ? AppColors.diet
+                : AppColors.notes;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface(isDark),
+        color: area.tint,
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(isDark)),
+        border: Border.all(color: area.color.withValues(alpha: 0.2)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(isDark), fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(fontSize: 12, color: area.ink, fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary(isDark), letterSpacing: -0.3)),
+        CountUpText(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary(isDark), letterSpacing: 0)),
         const SizedBox(height: 2),
-        Text(subtitle, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+        Text(subtitle, style: TextStyle(fontSize: 12, color: accent, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
     );
   }
@@ -352,19 +347,38 @@ class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
   }
 
   Widget _navRow(IconData icon, String title, bool isDark, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary(isDark)),
-          const SizedBox(width: 14),
-          Expanded(child: Text(title, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w500))),
-          Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted(isDark)),
-        ]),
+    final area = AppColors.areaForIcon(icon);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface(),
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppColors.radiusLarge),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+            child: Row(
+              children: [
+                IconChip(icon, area: area, size: 40),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(title, style: const TextStyle(fontSize: 15, color: AppColors.lightTextPrimary, fontWeight: FontWeight.w700)),
+                ),
+                Icon(Icons.arrow_forward_rounded, size: 18, color: area.ink),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _divider(bool isDark) => Divider(height: 1, color: AppColors.border(isDark));
+  Widget _divider(bool isDark) => const SizedBox.shrink();
 }

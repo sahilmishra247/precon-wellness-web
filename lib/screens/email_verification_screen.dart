@@ -1,11 +1,11 @@
 import 'dart:async';
+import '../widgets/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/client.dart';
 import '../services/auth_service.dart';
 import '../services/session_manager.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_split_layout.dart';
 import 'client_dashboard_screen.dart';
@@ -149,7 +149,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
 
-        content: Text('Welcome, $clientName!'),
+        content: Text('Welcome, $clientName'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
@@ -157,7 +157,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => ClientDashboardScreen(client: client)),
+        AppRoute(builder: (_) => ClientDashboardScreen(client: client)),
         (route) => false,
       );
     } catch (e) {
@@ -185,7 +185,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('New verification code sent!'),
+        content: const Text('New verification code sent'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
@@ -221,11 +221,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               icon: Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary(isDark)),
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                AppRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               ),
             ),
-            actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
           ),
           body: Center(
             child: SingleChildScrollView(
@@ -250,8 +249,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     Text(
                       'Check your email',
                       style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary(isDark), letterSpacing: -0.4,
+                        fontSize: 22, fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(isDark), letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -359,7 +358,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                     TextButton(
                       onPressed: () => Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        AppRoute(builder: (_) => const LoginScreen()),
                         (route) => false,
                       ),
                       child: Text('Use a different account',

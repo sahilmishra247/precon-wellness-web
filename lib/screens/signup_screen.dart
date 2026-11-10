@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import 'package:flutter/services.dart';
 import '../models/client.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_split_layout.dart';
 import 'email_verification_screen.dart';
@@ -189,11 +189,11 @@ class _SignupScreenState extends State<SignupScreen> {
         email: clientEmail,
       );
 
-      _showSnack('Account created! Check your email for the verification code.');
+      _showSnack('Account created. Check your email for the verification code.');
 
       Navigator.push(
         context,
-        MaterialPageRoute(
+        AppRoute(
           builder: (_) => EmailVerificationScreen(
             email: clientEmail,
             userName: clientName,
@@ -209,13 +209,12 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError
             ? AppColors.error
-            : (isDark ? AppColors.darkSurfaceElevated : AppColors.lightTextPrimary),
+            : (AppColors.navy),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
@@ -237,7 +236,6 @@ class _SignupScreenState extends State<SignupScreen> {
               icon: Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary(isDark)),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
           ),
           body: Center(
             child: SingleChildScrollView(
@@ -259,9 +257,9 @@ class _SignupScreenState extends State<SignupScreen> {
                               'Create account',
                               style: TextStyle(
                                 fontSize: 22,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary(isDark),
-                                letterSpacing: -0.5,
+                                letterSpacing: 0,
                               ),
                             ),
                             const SizedBox(height: 4),

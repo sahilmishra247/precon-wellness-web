@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../models/client.dart';
 import '../models/note.dart';
 import '../services/theme_service.dart';
 import '../services/wellness_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../utils/formatters.dart';
 import '../theme/app_colors.dart';
@@ -224,7 +224,8 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface(isDark),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(isDark)),
+        border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -268,7 +269,8 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface(isDark),
         borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-        border: Border.all(color: AppColors.border(isDark)),
+        border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +326,6 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
               ),
             ),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
             ],
           ),
           body: Center(
@@ -340,7 +341,8 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surface(isDark),
                           borderRadius: BorderRadius.circular(AppColors.radiusLarge),
-                          border: Border.all(color: AppColors.border(isDark)),
+                          border: Border.all(color: AppColors.lightBorderSubtle),
+        boxShadow: AppColors.cardShadow,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -406,7 +408,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
                               : ListView.separated(
                                   itemCount: notes.length,
                                   separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                                  itemBuilder: (context, index) {
+                                  itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                                     final note = notes[index];
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -478,7 +480,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
                                         ],
                                       ),
                                     );
-                                  },
+                                  })),
                                 ),
                     ),
                   ],
@@ -491,11 +493,7 @@ class _ConsultationNotesScreenState extends State<ConsultationNotesScreen> {
     );
   }
 
-  String _formatDateTime(DateTime value) {
-    final minute = value.minute.toString().padLeft(2, '0');
-    final hour = value.hour.toString().padLeft(2, '0');
-    return '${value.day}/${value.month}/${value.year} $hour:$minute';
-  }
+  String _formatDateTime(DateTime value) => '${fmtDate(value)}, ${fmtTime(value)}';
 }
 
 class _EditNoteDialog extends StatefulWidget {

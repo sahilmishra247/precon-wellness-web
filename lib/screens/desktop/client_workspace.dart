@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/motion.dart';
 import '../../models/client.dart';
 import '../../models/user_role.dart';
 import '../../services/theme_service.dart';
@@ -65,7 +66,7 @@ class _ClientWorkspaceState extends State<ClientWorkspace> {
                   onSelected: (i) => _go(_Section.values[i]),
                   destinations: [for (final s in _Section.values) _destinations[s]!],
                 ),
-                Expanded(child: _content(isDark)),
+                Expanded(child: FadeSwitch(child: _content(isDark))),
               ],
             ),
           ),
@@ -79,6 +80,7 @@ class _ClientWorkspaceState extends State<ClientWorkspace> {
     switch (_section) {
       case _Section.home:
         return Align(
+          key: const ValueKey('home'),
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1240),

@@ -43,8 +43,7 @@ class PreconWellnessApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'Precon Wellness',
           theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeService.instance.themeMode,
+          themeMode: ThemeMode.light,
           home: _getInitialScreen(),
         );
       },

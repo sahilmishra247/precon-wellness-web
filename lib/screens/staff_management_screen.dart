@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
+import '../widgets/motion.dart';
 import 'package:flutter/services.dart';
 import '../models/staff_member.dart';
 import '../services/staff_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../theme/app_colors.dart';
 import '../utils/error_messages.dart';
@@ -339,7 +340,6 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             title: Text('Staff directory', style: TextStyle(color: AppColors.textPrimary(isDark), fontWeight: FontWeight.w600, fontSize: 16)),
             actions: [
               IconButton(icon: Icon(Icons.refresh_rounded, size: 20, color: AppColors.textSecondary(isDark)), tooltip: 'Refresh', onPressed: _loadStaff),
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -455,18 +455,13 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
       itemCount: list.length,
       separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-      itemBuilder: (context, index) {
+      itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
         final member = list[index];
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.brandMuted(isDark),
-                child: Text(member.name.isNotEmpty ? member.name[0].toUpperCase() : 'S',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: AppColors.brand(isDark))),
-              ),
+              PersonAvatar(member.name, radius: 20),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -498,7 +493,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
             ],
           ),
         );
-      },
+      })),
     );
   }
 }

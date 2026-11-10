@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/motion.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../widgets/desktop_shell.dart';
 import '../widgets/simple_markdown.dart';
 import '../theme/app_colors.dart';
@@ -160,9 +160,9 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
                           article['title'] as String,
                           style: TextStyle(
                             fontSize: 17,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary(isDark),
-                            letterSpacing: -0.3,
+                            letterSpacing: 0,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -241,7 +241,7 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
       body: ListView(
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          PaneToolbar(title: 'Educational library', subtitle: '${_articles.length} articles'),
+          PaneToolbar(title: 'Educational library', subtitle: '${_articles.length} ${_articles.length == 1 ? 'article' : 'articles'}'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: LayoutBuilder(builder: (context, constraints) {
@@ -322,7 +322,6 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
               ),
             ),
             actions: [
-              ThemeToggleButton(color: AppColors.textSecondary(isDark)),
             ],
           ),
           body: Center(
@@ -332,7 +331,7 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 itemCount: _articles.length,
                 separatorBuilder: (_, _) => Divider(height: 1, color: AppColors.border(isDark)),
-                itemBuilder: (context, index) {
+                itemBuilder: (context, index) => FadeSlideIn(index: index, child: Builder(builder: (context) {
                   final article = _articles[index];
                   return InkWell(
                     onTap: () => _openArticle(context, article),
@@ -386,7 +385,7 @@ Your workout provides the stimulus, but real growth and fat loss happen during r
                       ),
                     ),
                   );
-                },
+                })),
               ),
             ),
           ),

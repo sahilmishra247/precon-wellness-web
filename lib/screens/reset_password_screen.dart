@@ -1,9 +1,9 @@
 import 'dart:async';
+import '../widgets/motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_split_layout.dart';
 import 'login_screen.dart';
@@ -135,7 +135,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        AppRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     } catch (e) {
@@ -163,7 +163,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('New reset code sent!'),
+        content: const Text('New reset code sent'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppColors.radiusMedium)),
@@ -229,11 +229,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               icon: Icon(Icons.arrow_back_rounded, color: AppColors.textSecondary(isDark)),
               onPressed: () => Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                AppRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               ),
             ),
-            actions: [ThemeToggleButton(color: AppColors.textSecondary(isDark))],
           ),
           body: Center(
             child: SingleChildScrollView(
@@ -257,8 +256,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     Text(
                       'Reset your password',
                       style: TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary(isDark), letterSpacing: -0.4,
+                        fontSize: 22, fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(isDark), letterSpacing: 0,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -380,7 +379,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     TextButton(
                       onPressed: () => Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        AppRoute(builder: (_) => const LoginScreen()),
                         (route) => false,
                       ),
                       child: Text('Back to login',
